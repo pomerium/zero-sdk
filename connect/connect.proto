@@ -26,6 +26,7 @@ message ConfigUpdated {
 // Connect service is used to maintain a persistent connection between the
 // Pomerium Core and Zero Cloud and receive messages from the cloud.
 service Connect {
-  // Subscribe is used to send a stream of messages from the Zero Cloud to the Pomerium Core in managed mode.
+  // Subscribe is used to send a stream of messages from the Zero Cloud to the
+  // Pomerium Core in managed mode.
   rpc Subscribe(SubscribeRequest) returns (stream Message);
 }

@@ -26,7 +26,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ConnectClient interface {
-	// Subscribe is used to send a stream of messages from the Zero Cloud to the Pomerium Core in managed mode.
+	// Subscribe is used to send a stream of messages from the Zero Cloud to the
+	// Pomerium Core in managed mode.
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Connect_SubscribeClient, error)
 }
 
@@ -74,7 +75,8 @@ func (x *connectSubscribeClient) Recv() (*Message, error) {
 // All implementations should embed UnimplementedConnectServer
 // for forward compatibility
 type ConnectServer interface {
-	// Subscribe is used to send a stream of messages from the Zero Cloud to the Pomerium Core in managed mode.
+	// Subscribe is used to send a stream of messages from the Zero Cloud to the
+	// Pomerium Core in managed mode.
 	Subscribe(*SubscribeRequest, Connect_SubscribeServer) error
 }
 
