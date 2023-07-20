@@ -1,0 +1,15 @@
+openapi: 3.0.0
+
+info:
+  title: "Pomerium Zero SDK API"
+  version: 0.1.0
+
+servers:
+  - url: /api/sdk/v1
+
+security:
+  - bearerAuth: []
+
+paths: {}
+
+components: {}

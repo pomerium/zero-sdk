@@ -1,0 +1,4 @@
+syntax = "proto3";
+
+package pomerium.zero;
+option go_package = "github.com/pomerium/zero-sdk/connect";

@@ -1,0 +1,18 @@
+repos:
+  - repo: local
+    hooks:
+      - id: proto
+        name: proto
+        entry: bash -c 'make proto'
+        language: system
+        files: \.proto$
+      - id: generate
+        name: generate
+        entry: bash -c 'make generate'
+        language: system
+        files: openapi\.yaml|go\.mod|go\.sum$
+      - id: go-mod-tidy
+        name: go-mod-tidy
+        language: system
+        entry: bash -c 'go mod tidy'
+        files: go\.mod|go\.sum$
