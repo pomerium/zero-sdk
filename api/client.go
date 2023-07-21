@@ -8,34 +8,24 @@ import (
 	"github.com/pomerium/zero-sdk/token"
 )
 
+const (
+	defaultMinTokenTTL = time.Minute * 5
+)
+
 type client struct {
 	tokenCache  *token.Cache
 	httpClient  *http.Client
 	minTokenTTL time.Duration
 }
 
-type APIClientOption func(*client)
-
-func WithMinTokenTTL(minTokenTTL time.Duration) APIClientOption {
-	return func(c *client) {
-		c.minTokenTTL = minTokenTTL
-	}
-}
-
-func WithClient(httpClient *http.Client) APIClientOption {
-	return func(c *client) {
-		c.httpClient = httpClient
-	}
-}
-
-func NewAPIClient(endpoint string, refreshToken string, opts ...APIClientOption) (ClientWithResponsesInterface, error) {
-	c := new(client)
-	opts = append([]APIClientOption{
-		WithMinTokenTTL(time.Minute * 5),
-		WithClient(http.DefaultClient),
-	}, opts...)
-	for _, opt := range opts {
-		opt(c)
+func NewAuthorizedClient(
+	endpoint string,
+	refreshToken string,
+	httpClient *http.Client,
+) (ClientWithResponsesInterface, error) {
+	c := &client{
+		httpClient:  httpClient,
+		minTokenTTL: defaultMinTokenTTL,
 	}
 
 	fetcher, err := NewTokenFetcher(endpoint, WithHTTPClient(c.httpClient))

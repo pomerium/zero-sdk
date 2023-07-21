@@ -41,7 +41,7 @@ func TestAPIClient(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	client, err := api.NewAPIClient(srv.URL, "refresh-token")
+	client, err := api.NewAuthorizedClient(srv.URL, "refresh-token", http.DefaultClient)
 	require.NoError(t, err)
 
 	resp, err := client.GetIdTokenWithResponse(context.Background(),
