@@ -1,4 +1,4 @@
-package: api
+package: cluster
 generate:
   chi-server: true
   strict-server: true

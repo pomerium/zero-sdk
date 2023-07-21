@@ -1,4 +1,4 @@
-package: api
+package: cluster
 generate:
   models: true
 output: models.gen.go
