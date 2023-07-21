@@ -1,4 +1,4 @@
-package api_test
+package cluster_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pomerium/zero-sdk/api"
+	api "github.com/pomerium/zero-sdk/cluster"
 )
 
 func TestAPIClient(t *testing.T) {
