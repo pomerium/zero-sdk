@@ -3,7 +3,7 @@ package token
 import (
 	"context"
 	"fmt"
-	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -14,9 +14,9 @@ const (
 // Cache is a thread-safe cache of a authorization token
 // that may be used across http and grpc clients
 type Cache struct {
-	sync.RWMutex
+	lock         chan struct{}
 	refreshToken string
-	token        *Token
+	token        atomic.Value
 	fetcher      Fetcher
 	TimeNow      func() time.Time
 }
@@ -34,6 +34,7 @@ func (t *Token) ExpiresAfter(tm time.Time) bool {
 
 func NewCache(fetcher Fetcher, refreshToken string) *Cache {
 	return &Cache{
+		lock:         make(chan struct{}, 1),
 		fetcher:      fetcher,
 		refreshToken: refreshToken,
 	}
@@ -50,11 +51,8 @@ func (c *Cache) timeNow() time.Time {
 func (c *Cache) GetToken(ctx context.Context, minTTL time.Duration) (string, error) {
 	minExpiration := c.timeNow().Add(minTTL)
 
-	c.RLock()
-	token := c.token
-	c.RUnlock()
-
-	if token.ExpiresAfter(minExpiration) {
+	token, ok := c.token.Load().(*Token)
+	if ok && token.ExpiresAfter(minExpiration) {
 		return token.Bearer, nil
 	}
 
@@ -62,21 +60,28 @@ func (c *Cache) GetToken(ctx context.Context, minTTL time.Duration) (string, err
 }
 
 func (c *Cache) forceRefreshToken(ctx context.Context, minExpiration time.Time) (string, error) {
-	c.Lock()
-	defer c.Unlock()
+	select {
+	case c.lock <- struct{}{}:
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+	defer func() {
+		<-c.lock
+	}()
 
 	ctx, cancel := context.WithTimeout(ctx, maxLockWait)
 	defer cancel()
 
-	if c.token.ExpiresAfter(minExpiration) {
-		return c.token.Bearer, nil
+	token, ok := c.token.Load().(*Token)
+	if ok && token.ExpiresAfter(minExpiration) {
+		return token.Bearer, nil
 	}
 
 	token, err := c.fetcher(ctx, c.refreshToken)
 	if err != nil {
 		return "", err
 	}
-	c.token = token
+	c.token.Store(token)
 
 	if token.Expires.Before(minExpiration) {
 		return "", fmt.Errorf("new token cannot satisfy TTL: %v", minExpiration.Sub(token.Expires))
