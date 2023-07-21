@@ -209,7 +209,7 @@ type ClientWithResponsesInterface interface {
 type ExchangeClusterIdentityTokenResp struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *GetTokenResponse
+	JSON200      *ExchangeTokenResponse
 	JSON400      *ErrorResponse
 }
 
@@ -261,7 +261,7 @@ func ParseExchangeClusterIdentityTokenResp(rsp *http.Response) (*ExchangeCluster
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest GetTokenResponse
+		var dest ExchangeTokenResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

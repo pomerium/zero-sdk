@@ -172,7 +172,7 @@ type ExchangeClusterIdentityTokenResponseObject interface {
 	VisitExchangeClusterIdentityTokenResponse(w http.ResponseWriter) error
 }
 
-type ExchangeClusterIdentityToken200JSONResponse GetTokenResponse
+type ExchangeClusterIdentityToken200JSONResponse ExchangeTokenResponse
 
 func (response ExchangeClusterIdentityToken200JSONResponse) VisitExchangeClusterIdentityTokenResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")

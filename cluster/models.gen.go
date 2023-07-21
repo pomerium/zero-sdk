@@ -9,14 +9,14 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// GetTokenRequest defines model for GetTokenRequest.
-type GetTokenRequest struct {
+// ExchangeTokenRequest defines model for ExchangeTokenRequest.
+type ExchangeTokenRequest struct {
 	// RefreshToken cluster identity token
 	RefreshToken string `json:"refreshToken"`
 }
 
-// GetTokenResponse defines model for GetTokenResponse.
-type GetTokenResponse struct {
+// ExchangeTokenResponse defines model for ExchangeTokenResponse.
+type ExchangeTokenResponse struct {
 	ExpiresInSeconds string `json:"expiresInSeconds"`
 
 	// IdToken ID token
@@ -24,4 +24,4 @@ type GetTokenResponse struct {
 }
 
 // ExchangeClusterIdentityTokenJSONRequestBody defines body for ExchangeClusterIdentityToken for application/json ContentType.
-type ExchangeClusterIdentityTokenJSONRequestBody = GetTokenRequest
+type ExchangeClusterIdentityTokenJSONRequestBody = ExchangeTokenRequest
