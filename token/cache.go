@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+const (
+	maxLockWait = 30 * time.Second
+)
+
 // Cache is a thread-safe cache of a authorization token
 // that may be used across http and grpc clients
 type Cache struct {
@@ -60,6 +64,9 @@ func (c *Cache) GetToken(ctx context.Context, minTTL time.Duration) (string, err
 func (c *Cache) forceRefreshToken(ctx context.Context, minExpiration time.Time) (string, error) {
 	c.Lock()
 	defer c.Unlock()
+
+	ctx, cancel := context.WithTimeout(ctx, maxLockWait)
+	defer cancel()
 
 	if c.token.ExpiresAfter(minExpiration) {
 		return c.token.Bearer, nil
