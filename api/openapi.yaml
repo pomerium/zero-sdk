@@ -10,6 +10,60 @@ servers:
 security:
   - bearerAuth: []
 
-paths: {}
+paths:
+  /token:
+    post:
+      description: Exchange cluster identity token for bearer token
+      operationId: getIdToken
+      tags: [token]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetTokenRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetTokenResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-components: {}
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error
+    GetTokenRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: cluster identity token
+      required:
+        - refreshToken
+    GetTokenResponse:
+      type: object
+      properties:
+        idToken:
+          type: string
+          description: ID token
+        expiresInSeconds:
+          type: string
+          format: int64
+      required:
+        - idToken
+        - expiresInSeconds

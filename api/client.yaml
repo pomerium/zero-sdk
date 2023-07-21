@@ -1,4 +1,4 @@
-package: openapi
+package: api
 generate:
   client: true
   models: false
