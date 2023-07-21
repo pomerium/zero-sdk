@@ -16,8 +16,8 @@ import (
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
-	// (POST /token)
-	GetIdToken(w http.ResponseWriter, r *http.Request)
+	// (POST /exchangeToken)
+	ExchangeClusterIdentityToken(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -29,12 +29,12 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// GetIdToken operation middleware
-func (siw *ServerInterfaceWrapper) GetIdToken(w http.ResponseWriter, r *http.Request) {
+// ExchangeClusterIdentityToken operation middleware
+func (siw *ServerInterfaceWrapper) ExchangeClusterIdentityToken(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetIdToken(w, r)
+		siw.Handler.ExchangeClusterIdentityToken(w, r)
 	})
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -158,32 +158,32 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/token", wrapper.GetIdToken)
+		r.Post(options.BaseURL+"/exchangeToken", wrapper.ExchangeClusterIdentityToken)
 	})
 
 	return r
 }
 
-type GetIdTokenRequestObject struct {
-	Body *GetIdTokenJSONRequestBody
+type ExchangeClusterIdentityTokenRequestObject struct {
+	Body *ExchangeClusterIdentityTokenJSONRequestBody
 }
 
-type GetIdTokenResponseObject interface {
-	VisitGetIdTokenResponse(w http.ResponseWriter) error
+type ExchangeClusterIdentityTokenResponseObject interface {
+	VisitExchangeClusterIdentityTokenResponse(w http.ResponseWriter) error
 }
 
-type GetIdToken200JSONResponse GetTokenResponse
+type ExchangeClusterIdentityToken200JSONResponse GetTokenResponse
 
-func (response GetIdToken200JSONResponse) VisitGetIdTokenResponse(w http.ResponseWriter) error {
+func (response ExchangeClusterIdentityToken200JSONResponse) VisitExchangeClusterIdentityTokenResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetIdToken400JSONResponse ErrorResponse
+type ExchangeClusterIdentityToken400JSONResponse ErrorResponse
 
-func (response GetIdToken400JSONResponse) VisitGetIdTokenResponse(w http.ResponseWriter) error {
+func (response ExchangeClusterIdentityToken400JSONResponse) VisitExchangeClusterIdentityTokenResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
 
@@ -193,8 +193,8 @@ func (response GetIdToken400JSONResponse) VisitGetIdTokenResponse(w http.Respons
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
-	// (POST /token)
-	GetIdToken(ctx context.Context, request GetIdTokenRequestObject) (GetIdTokenResponseObject, error)
+	// (POST /exchangeToken)
+	ExchangeClusterIdentityToken(ctx context.Context, request ExchangeClusterIdentityTokenRequestObject) (ExchangeClusterIdentityTokenResponseObject, error)
 }
 
 type StrictHandlerFunc = runtime.StrictHttpHandlerFunc
@@ -226,11 +226,11 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
-// GetIdToken operation middleware
-func (sh *strictHandler) GetIdToken(w http.ResponseWriter, r *http.Request) {
-	var request GetIdTokenRequestObject
+// ExchangeClusterIdentityToken operation middleware
+func (sh *strictHandler) ExchangeClusterIdentityToken(w http.ResponseWriter, r *http.Request) {
+	var request ExchangeClusterIdentityTokenRequestObject
 
-	var body GetIdTokenJSONRequestBody
+	var body ExchangeClusterIdentityTokenJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -238,18 +238,18 @@ func (sh *strictHandler) GetIdToken(w http.ResponseWriter, r *http.Request) {
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetIdToken(ctx, request.(GetIdTokenRequestObject))
+		return sh.ssi.ExchangeClusterIdentityToken(ctx, request.(ExchangeClusterIdentityTokenRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetIdToken")
+		handler = middleware(handler, "ExchangeClusterIdentityToken")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetIdTokenResponseObject); ok {
-		if err := validResponse.VisitGetIdTokenResponse(w); err != nil {
+	} else if validResponse, ok := response.(ExchangeClusterIdentityTokenResponseObject); ok {
+		if err := validResponse.VisitExchangeClusterIdentityTokenResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

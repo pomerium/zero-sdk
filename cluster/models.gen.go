@@ -23,5 +23,5 @@ type GetTokenResponse struct {
 	IdToken string `json:"idToken"`
 }
 
-// GetIdTokenJSONRequestBody defines body for GetIdToken for application/json ContentType.
-type GetIdTokenJSONRequestBody = GetTokenRequest
+// ExchangeClusterIdentityTokenJSONRequestBody defines body for ExchangeClusterIdentityToken for application/json ContentType.
+type ExchangeClusterIdentityTokenJSONRequestBody = GetTokenRequest
