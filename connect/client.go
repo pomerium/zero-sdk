@@ -91,6 +91,7 @@ func (c *client) getGRPCConn(ctx context.Context, endpoint string) (*grpc.Client
 	return conn, nil
 }
 
+// GetRequestMetadata implements credentials.PerRPCCredentials
 func (c *client) GetRequestMetadata(ctx context.Context, _ ...string) (map[string]string, error) {
 	token, err := c.tokenCache.GetToken(ctx, c.minTokenTTL)
 	if err != nil {
@@ -101,8 +102,7 @@ func (c *client) GetRequestMetadata(ctx context.Context, _ ...string) (map[strin
 	}, nil
 }
 
-// RequireTransportSecurity indicates whether the credentials requires
-// transport security.
+// RequireTransportSecurity implements credentials.PerRPCCredentials
 func (c *client) RequireTransportSecurity() bool {
 	return c.requireTLS
 }
