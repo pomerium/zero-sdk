@@ -29,7 +29,7 @@ func NewTokenFetcher(endpoint string, opts ...ClientOption) (token.Fetcher, erro
 		}
 
 		if resp.JSON200 == nil {
-			return nil, fmt.Errorf("unexpected response from GetIdToken: %d: %s", resp.StatusCode(), string(resp.Body))
+			return nil, fmt.Errorf("unexpected response from exchangeToken: %d: %s", resp.StatusCode(), string(resp.Body))
 		}
 
 		expiresSeconds, err := strconv.ParseInt(resp.JSON200.ExpiresInSeconds, 10, 64)
