@@ -17,7 +17,7 @@ func NewTokenFetcher(endpoint string, opts ...ClientOption) (token.Fetcher, erro
 
 	return func(ctx context.Context, refreshToken string) (*token.Token, error) {
 		now := time.Now()
-		resp, err := client.GetIdTokenWithResponse(ctx, GetTokenRequest{
+		resp, err := client.ExchangeClusterIdentityTokenWithResponse(ctx, ExchangeTokenRequest{
 			RefreshToken: refreshToken,
 		})
 		if err != nil {

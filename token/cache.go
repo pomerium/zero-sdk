@@ -14,11 +14,13 @@ const (
 // Cache is a thread-safe cache of a authorization token
 // that may be used across http and grpc clients
 type Cache struct {
-	lock         chan struct{}
+	TimeNow func() time.Time
+
 	refreshToken string
-	token        atomic.Value
 	fetcher      Fetcher
-	TimeNow      func() time.Time
+
+	lock  chan struct{}
+	token atomic.Value
 }
 
 type Fetcher func(ctx context.Context, refreshToken string) (*Token, error)

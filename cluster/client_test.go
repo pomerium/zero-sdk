@@ -30,8 +30,8 @@ func TestAPIClient(t *testing.T) {
 	idToken := "id-token"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/token":
-			respond(w, http.StatusOK, api.GetTokenResponse{
+		case "/exchangeToken":
+			respond(w, http.StatusOK, api.ExchangeTokenResponse{
 				IdToken:          idToken,
 				ExpiresInSeconds: "3600",
 			})
@@ -44,8 +44,10 @@ func TestAPIClient(t *testing.T) {
 	client, err := api.NewAuthorizedClient(srv.URL, "refresh-token", http.DefaultClient)
 	require.NoError(t, err)
 
-	resp, err := client.GetIdTokenWithResponse(context.Background(),
-		api.GetTokenRequest{},
+	resp, err := client.ExchangeClusterIdentityTokenWithResponse(context.Background(),
+		api.ExchangeTokenRequest{
+			RefreshToken: "refresh-token",
+		},
 	)
 	require.NoError(t, err)
 	require.Equal(t, idToken, resp.JSON200.IdToken)

@@ -5,16 +5,16 @@ info:
   version: 0.1.0
 
 servers:
-  - url: /api/cluster/v1
+  - url: /cluster/v1
 
 security:
   - bearerAuth: []
 
 paths:
-  /token:
+  /exchangeToken:
     post:
       description: Exchange cluster identity token for bearer token
-      operationId: getIdToken
+      operationId: exchangeClusterIdentityToken
       tags: [token]
       security: []
       requestBody:
@@ -22,14 +22,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GetTokenRequest"
+              $ref: "#/components/schemas/ExchangeTokenRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTokenResponse"
+                $ref: "#/components/schemas/ExchangeTokenResponse"
         "400":
           description: Bad Request
           content:
@@ -47,7 +47,7 @@ components:
           description: Error message
       required:
         - error
-    GetTokenRequest:
+    ExchangeTokenRequest:
       type: object
       properties:
         refreshToken:
@@ -55,7 +55,7 @@ components:
           description: cluster identity token
       required:
         - refreshToken
-    GetTokenResponse:
+    ExchangeTokenResponse:
       type: object
       properties:
         idToken:

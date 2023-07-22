@@ -87,14 +87,14 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// GetIdToken request with any body
-	GetIdTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ExchangeClusterIdentityToken request with any body
+	ExchangeClusterIdentityTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	GetIdToken(ctx context.Context, body GetIdTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ExchangeClusterIdentityToken(ctx context.Context, body ExchangeClusterIdentityTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) GetIdTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetIdTokenRequestWithBody(c.Server, contentType, body)
+func (c *Client) ExchangeClusterIdentityTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewExchangeClusterIdentityTokenRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -105,8 +105,8 @@ func (c *Client) GetIdTokenWithBody(ctx context.Context, contentType string, bod
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetIdToken(ctx context.Context, body GetIdTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetIdTokenRequest(c.Server, body)
+func (c *Client) ExchangeClusterIdentityToken(ctx context.Context, body ExchangeClusterIdentityTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewExchangeClusterIdentityTokenRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -117,19 +117,19 @@ func (c *Client) GetIdToken(ctx context.Context, body GetIdTokenJSONRequestBody,
 	return c.Client.Do(req)
 }
 
-// NewGetIdTokenRequest calls the generic GetIdToken builder with application/json body
-func NewGetIdTokenRequest(server string, body GetIdTokenJSONRequestBody) (*http.Request, error) {
+// NewExchangeClusterIdentityTokenRequest calls the generic ExchangeClusterIdentityToken builder with application/json body
+func NewExchangeClusterIdentityTokenRequest(server string, body ExchangeClusterIdentityTokenJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewGetIdTokenRequestWithBody(server, "application/json", bodyReader)
+	return NewExchangeClusterIdentityTokenRequestWithBody(server, "application/json", bodyReader)
 }
 
-// NewGetIdTokenRequestWithBody generates requests for GetIdToken with any type of body
-func NewGetIdTokenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewExchangeClusterIdentityTokenRequestWithBody generates requests for ExchangeClusterIdentityToken with any type of body
+func NewExchangeClusterIdentityTokenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -137,7 +137,7 @@ func NewGetIdTokenRequestWithBody(server string, contentType string, body io.Rea
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/token")
+	operationPath := fmt.Sprintf("/exchangeToken")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -200,21 +200,21 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// GetIdToken request with any body
-	GetIdTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetIdTokenResp, error)
+	// ExchangeClusterIdentityToken request with any body
+	ExchangeClusterIdentityTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error)
 
-	GetIdTokenWithResponse(ctx context.Context, body GetIdTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*GetIdTokenResp, error)
+	ExchangeClusterIdentityTokenWithResponse(ctx context.Context, body ExchangeClusterIdentityTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error)
 }
 
-type GetIdTokenResp struct {
+type ExchangeClusterIdentityTokenResp struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *GetTokenResponse
+	JSON200      *ExchangeTokenResponse
 	JSON400      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r GetIdTokenResp) Status() string {
+func (r ExchangeClusterIdentityTokenResp) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -222,46 +222,46 @@ func (r GetIdTokenResp) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetIdTokenResp) StatusCode() int {
+func (r ExchangeClusterIdentityTokenResp) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-// GetIdTokenWithBodyWithResponse request with arbitrary body returning *GetIdTokenResp
-func (c *ClientWithResponses) GetIdTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetIdTokenResp, error) {
-	rsp, err := c.GetIdTokenWithBody(ctx, contentType, body, reqEditors...)
+// ExchangeClusterIdentityTokenWithBodyWithResponse request with arbitrary body returning *ExchangeClusterIdentityTokenResp
+func (c *ClientWithResponses) ExchangeClusterIdentityTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error) {
+	rsp, err := c.ExchangeClusterIdentityTokenWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetIdTokenResp(rsp)
+	return ParseExchangeClusterIdentityTokenResp(rsp)
 }
 
-func (c *ClientWithResponses) GetIdTokenWithResponse(ctx context.Context, body GetIdTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*GetIdTokenResp, error) {
-	rsp, err := c.GetIdToken(ctx, body, reqEditors...)
+func (c *ClientWithResponses) ExchangeClusterIdentityTokenWithResponse(ctx context.Context, body ExchangeClusterIdentityTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error) {
+	rsp, err := c.ExchangeClusterIdentityToken(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetIdTokenResp(rsp)
+	return ParseExchangeClusterIdentityTokenResp(rsp)
 }
 
-// ParseGetIdTokenResp parses an HTTP response from a GetIdTokenWithResponse call
-func ParseGetIdTokenResp(rsp *http.Response) (*GetIdTokenResp, error) {
+// ParseExchangeClusterIdentityTokenResp parses an HTTP response from a ExchangeClusterIdentityTokenWithResponse call
+func ParseExchangeClusterIdentityTokenResp(rsp *http.Response) (*ExchangeClusterIdentityTokenResp, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetIdTokenResp{
+	response := &ExchangeClusterIdentityTokenResp{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest GetTokenResponse
+		var dest ExchangeTokenResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
