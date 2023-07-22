@@ -1,0 +1,69 @@
+openapi: 3.0.0
+
+info:
+  title: "Pomerium Zero SDK API"
+  version: 0.1.0
+
+servers:
+  - url: /cluster/v1
+
+security:
+  - bearerAuth: []
+
+paths:
+  /exchangeToken:
+    post:
+      description: Exchange cluster identity token for bearer token
+      operationId: exchangeClusterIdentityToken
+      tags: [token]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExchangeTokenRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeTokenResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error
+    ExchangeTokenRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: cluster identity token
+      required:
+        - refreshToken
+    ExchangeTokenResponse:
+      type: object
+      properties:
+        idToken:
+          type: string
+          description: ID token
+        expiresInSeconds:
+          type: string
+          format: int64
+      required:
+        - idToken
+        - expiresInSeconds
