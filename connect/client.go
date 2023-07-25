@@ -46,7 +46,7 @@ func NewAuthorizedConnectClient(
 func (c *client) getGRPCConn(ctx context.Context) (*grpc.ClientConn, error) {
 	conn, err := grpc.DialContext(ctx,
 		c.config.GetConnectionURI(),
-		append(c.config.opts,
+		append(c.config.GetDialOptions(),
 			grpc.WithPerRPCCredentials(c),
 			grpc.WithConnectParams(grpc.ConnectParams{
 				Backoff:           grpc_backoff.DefaultConfig,

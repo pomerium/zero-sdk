@@ -40,6 +40,10 @@ func (c *Config) RequireTLS() bool {
 	return c.requireTLS
 }
 
+func (c *Config) GetDialOptions() []grpc.DialOption {
+	return c.opts
+}
+
 func (c *Config) parseEndpoint(endpoint string) error {
 	u, err := url.Parse(endpoint)
 	if err != nil {

@@ -23,18 +23,19 @@ func TestConfig(t *testing.T) {
 		requireTLS    bool
 		expectError   bool
 	}{
-		{"", "", false, true},
-		{"http://", "", false, true},
-		{"https://", "", true, true},
-		{"localhost:8721", "", false, true},
 		{"http://localhost:8721", "dns:localhost:8721", false, false},
 		{"https://localhost:8721", "dns:localhost:8721", true, false},
 		{"http://localhost:8721/", "dns:localhost:8721", false, false},
 		{"https://localhost:8721/", "dns:localhost:8721", true, false},
-		{"http://localhost:8721/path", "dns:localhost:8721", false, true},
-		{"https://localhost:8721/path", "dns:localhost:8721", true, true},
 		{"http://localhost", "dns:localhost:80", false, false},
-		{"https://localhost:443", "dns:localhost:443", true, false},
+		{"https://localhost", "dns:localhost:443", true, false},
+
+		{endpoint: "", expectError: true},
+		{endpoint: "http://", expectError: true},
+		{endpoint: "https://", expectError: true},
+		{endpoint: "localhost:8721", expectError: true},
+		{endpoint: "http://localhost:8721/path", expectError: true},
+		{endpoint: "https://localhost:8721/path", expectError: true},
 	} {
 		tc := tc
 		t.Run(tc.endpoint, func(t *testing.T) {
