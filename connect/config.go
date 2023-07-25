@@ -30,6 +30,7 @@ func NewConfig(endpoint string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid endpoint: %w", err)
 	}
+	c.buildTLSOptions()
 	return c, nil
 }
 
@@ -51,6 +52,16 @@ func (c *Config) GetDialOptions() []grpc.DialOption {
 	return c.opts
 }
 
+func (c *Config) buildTLSOptions() {
+	creds := insecure.NewCredentials()
+	if c.requireTLS {
+		credentials.NewTLS(&tls.Config{
+			MinVersion: tls.VersionTLS12,
+		})
+	}
+	c.opts = append(c.opts, grpc.WithTransportCredentials(creds))
+}
+
 func (c *Config) parseEndpoint(endpoint string) error {
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -67,15 +78,12 @@ func (c *Config) parseEndpoint(endpoint string) error {
 	}
 
 	var requireTLS bool
-	var opts []grpc.DialOption
 	if u.Scheme == "http" {
 		requireTLS = false
-		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if port == "" {
 			port = "80"
 		}
 	} else if u.Scheme == "https" {
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 		requireTLS = true
 		if port == "" {
 			port = "443"
@@ -86,7 +94,6 @@ func (c *Config) parseEndpoint(endpoint string) error {
 
 	c.connectionURI = fmt.Sprintf("dns:%s:%s", host, port)
 	c.requireTLS = requireTLS
-	c.opts = append(c.opts, opts...)
 
 	return nil
 }
