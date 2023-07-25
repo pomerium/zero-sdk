@@ -16,6 +16,12 @@ import (
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (GET /bundles)
+	GetClusterResourceBundles(w http.ResponseWriter, r *http.Request)
+
+	// (GET /bundles/{bundleId}/download)
+	DownloadClusterResourceBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
+
 	// (POST /exchangeToken)
 	ExchangeClusterIdentityToken(w http.ResponseWriter, r *http.Request)
 }
@@ -28,6 +34,51 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetClusterResourceBundles operation middleware
+func (siw *ServerInterfaceWrapper) GetClusterResourceBundles(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetClusterResourceBundles(w, r)
+	})
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DownloadClusterResourceBundle operation middleware
+func (siw *ServerInterfaceWrapper) DownloadClusterResourceBundle(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "bundleId" -------------
+	var bundleId BundleId
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "bundleId", runtime.ParamLocationPath, chi.URLParam(r, "bundleId"), &bundleId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bundleId", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadClusterResourceBundle(w, r, bundleId)
+	})
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // ExchangeClusterIdentityToken operation middleware
 func (siw *ServerInterfaceWrapper) ExchangeClusterIdentityToken(w http.ResponseWriter, r *http.Request) {
@@ -158,10 +209,85 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/bundles", wrapper.GetClusterResourceBundles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/bundles/{bundleId}/download", wrapper.DownloadClusterResourceBundle)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/exchangeToken", wrapper.ExchangeClusterIdentityToken)
 	})
 
 	return r
+}
+
+type GetClusterResourceBundlesRequestObject struct {
+}
+
+type GetClusterResourceBundlesResponseObject interface {
+	VisitGetClusterResourceBundlesResponse(w http.ResponseWriter) error
+}
+
+type GetClusterResourceBundles200JSONResponse GetBundlesResponse
+
+func (response GetClusterResourceBundles200JSONResponse) VisitGetClusterResourceBundlesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetClusterResourceBundles400JSONResponse ErrorResponse
+
+func (response GetClusterResourceBundles400JSONResponse) VisitGetClusterResourceBundlesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetClusterResourceBundles500JSONResponse ErrorResponse
+
+func (response GetClusterResourceBundles500JSONResponse) VisitGetClusterResourceBundlesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadClusterResourceBundleRequestObject struct {
+	BundleId BundleId `json:"bundleId"`
+}
+
+type DownloadClusterResourceBundleResponseObject interface {
+	VisitDownloadClusterResourceBundleResponse(w http.ResponseWriter) error
+}
+
+type DownloadClusterResourceBundle200JSONResponse DownloadBundleResponse
+
+func (response DownloadClusterResourceBundle200JSONResponse) VisitDownloadClusterResourceBundleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadClusterResourceBundle400JSONResponse ErrorResponse
+
+func (response DownloadClusterResourceBundle400JSONResponse) VisitDownloadClusterResourceBundleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadClusterResourceBundle500JSONResponse ErrorResponse
+
+func (response DownloadClusterResourceBundle500JSONResponse) VisitDownloadClusterResourceBundleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type ExchangeClusterIdentityTokenRequestObject struct {
@@ -190,8 +316,23 @@ func (response ExchangeClusterIdentityToken400JSONResponse) VisitExchangeCluster
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ExchangeClusterIdentityToken500JSONResponse ErrorResponse
+
+func (response ExchangeClusterIdentityToken500JSONResponse) VisitExchangeClusterIdentityTokenResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+
+	// (GET /bundles)
+	GetClusterResourceBundles(ctx context.Context, request GetClusterResourceBundlesRequestObject) (GetClusterResourceBundlesResponseObject, error)
+
+	// (GET /bundles/{bundleId}/download)
+	DownloadClusterResourceBundle(ctx context.Context, request DownloadClusterResourceBundleRequestObject) (DownloadClusterResourceBundleResponseObject, error)
 
 	// (POST /exchangeToken)
 	ExchangeClusterIdentityToken(ctx context.Context, request ExchangeClusterIdentityTokenRequestObject) (ExchangeClusterIdentityTokenResponseObject, error)
@@ -224,6 +365,56 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetClusterResourceBundles operation middleware
+func (sh *strictHandler) GetClusterResourceBundles(w http.ResponseWriter, r *http.Request) {
+	var request GetClusterResourceBundlesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetClusterResourceBundles(ctx, request.(GetClusterResourceBundlesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetClusterResourceBundles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetClusterResourceBundlesResponseObject); ok {
+		if err := validResponse.VisitGetClusterResourceBundlesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// DownloadClusterResourceBundle operation middleware
+func (sh *strictHandler) DownloadClusterResourceBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId) {
+	var request DownloadClusterResourceBundleRequestObject
+
+	request.BundleId = bundleId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DownloadClusterResourceBundle(ctx, request.(DownloadClusterResourceBundleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DownloadClusterResourceBundle")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DownloadClusterResourceBundleResponseObject); ok {
+		if err := validResponse.VisitDownloadClusterResourceBundleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
 }
 
 // ExchangeClusterIdentityToken operation middleware

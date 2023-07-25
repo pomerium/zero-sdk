@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/deepmap/oapi-codegen/pkg/runtime"
 )
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
@@ -87,10 +89,40 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// GetClusterResourceBundles request
+	GetClusterResourceBundles(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DownloadClusterResourceBundle request
+	DownloadClusterResourceBundle(ctx context.Context, bundleId BundleId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ExchangeClusterIdentityToken request with any body
 	ExchangeClusterIdentityTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	ExchangeClusterIdentityToken(ctx context.Context, body ExchangeClusterIdentityTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) GetClusterResourceBundles(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetClusterResourceBundlesRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DownloadClusterResourceBundle(ctx context.Context, bundleId BundleId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDownloadClusterResourceBundleRequest(c.Server, bundleId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) ExchangeClusterIdentityTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -115,6 +147,67 @@ func (c *Client) ExchangeClusterIdentityToken(ctx context.Context, body Exchange
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewGetClusterResourceBundlesRequest generates requests for GetClusterResourceBundles
+func NewGetClusterResourceBundlesRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/bundles")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewDownloadClusterResourceBundleRequest generates requests for DownloadClusterResourceBundle
+func NewDownloadClusterResourceBundleRequest(server string, bundleId BundleId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "bundleId", runtime.ParamLocationPath, bundleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/bundles/%s/download", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewExchangeClusterIdentityTokenRequest calls the generic ExchangeClusterIdentityToken builder with application/json body
@@ -200,10 +293,64 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// GetClusterResourceBundles request
+	GetClusterResourceBundlesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetClusterResourceBundlesResp, error)
+
+	// DownloadClusterResourceBundle request
+	DownloadClusterResourceBundleWithResponse(ctx context.Context, bundleId BundleId, reqEditors ...RequestEditorFn) (*DownloadClusterResourceBundleResp, error)
+
 	// ExchangeClusterIdentityToken request with any body
 	ExchangeClusterIdentityTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error)
 
 	ExchangeClusterIdentityTokenWithResponse(ctx context.Context, body ExchangeClusterIdentityTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error)
+}
+
+type GetClusterResourceBundlesResp struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetBundlesResponse
+	JSON400      *ErrorResponse
+	JSON500      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetClusterResourceBundlesResp) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetClusterResourceBundlesResp) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DownloadClusterResourceBundleResp struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *DownloadBundleResponse
+	JSON400      *ErrorResponse
+	JSON500      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DownloadClusterResourceBundleResp) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DownloadClusterResourceBundleResp) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type ExchangeClusterIdentityTokenResp struct {
@@ -211,6 +358,7 @@ type ExchangeClusterIdentityTokenResp struct {
 	HTTPResponse *http.Response
 	JSON200      *ExchangeTokenResponse
 	JSON400      *ErrorResponse
+	JSON500      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -229,6 +377,24 @@ func (r ExchangeClusterIdentityTokenResp) StatusCode() int {
 	return 0
 }
 
+// GetClusterResourceBundlesWithResponse request returning *GetClusterResourceBundlesResp
+func (c *ClientWithResponses) GetClusterResourceBundlesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetClusterResourceBundlesResp, error) {
+	rsp, err := c.GetClusterResourceBundles(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetClusterResourceBundlesResp(rsp)
+}
+
+// DownloadClusterResourceBundleWithResponse request returning *DownloadClusterResourceBundleResp
+func (c *ClientWithResponses) DownloadClusterResourceBundleWithResponse(ctx context.Context, bundleId BundleId, reqEditors ...RequestEditorFn) (*DownloadClusterResourceBundleResp, error) {
+	rsp, err := c.DownloadClusterResourceBundle(ctx, bundleId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDownloadClusterResourceBundleResp(rsp)
+}
+
 // ExchangeClusterIdentityTokenWithBodyWithResponse request with arbitrary body returning *ExchangeClusterIdentityTokenResp
 func (c *ClientWithResponses) ExchangeClusterIdentityTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error) {
 	rsp, err := c.ExchangeClusterIdentityTokenWithBody(ctx, contentType, body, reqEditors...)
@@ -244,6 +410,86 @@ func (c *ClientWithResponses) ExchangeClusterIdentityTokenWithResponse(ctx conte
 		return nil, err
 	}
 	return ParseExchangeClusterIdentityTokenResp(rsp)
+}
+
+// ParseGetClusterResourceBundlesResp parses an HTTP response from a GetClusterResourceBundlesWithResponse call
+func ParseGetClusterResourceBundlesResp(rsp *http.Response) (*GetClusterResourceBundlesResp, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetClusterResourceBundlesResp{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetBundlesResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDownloadClusterResourceBundleResp parses an HTTP response from a DownloadClusterResourceBundleWithResponse call
+func ParseDownloadClusterResourceBundleResp(rsp *http.Response) (*DownloadClusterResourceBundleResp, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DownloadClusterResourceBundleResp{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DownloadBundleResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseExchangeClusterIdentityTokenResp parses an HTTP response from a ExchangeClusterIdentityTokenWithResponse call
@@ -273,6 +519,13 @@ func ParseExchangeClusterIdentityTokenResp(rsp *http.Response) (*ExchangeCluster
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 
