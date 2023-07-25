@@ -1,18 +1,20 @@
 package connect
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/url"
 	"regexp"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Config struct {
-	host string
-	port string
+	connectionURI string
 	// requireTLS is whether TLS should be used or cleartext
 	requireTLS bool
 	// opts are additional options to pass to the gRPC client
@@ -33,7 +35,12 @@ func NewConfig(endpoint string) (*Config, error) {
 
 // GetConnectionURI returns connection string conforming to https://github.com/grpc/grpc/blob/master/doc/naming.md
 func (c *Config) GetConnectionURI() string {
-	return fmt.Sprintf("dns:%s:%s", c.host, c.port)
+	return c.connectionURI
+}
+
+// GetDialTimeout returns the timeout for the dial operation
+func (c *Config) GetDialTimeout() time.Duration {
+	return defaultDialTimeout
 }
 
 func (c *Config) RequireTLS() bool {
@@ -59,7 +66,7 @@ func (c *Config) parseEndpoint(endpoint string) error {
 		return fmt.Errorf("error splitting host and port: %w", err)
 	}
 
-	requireTLS := true
+	var requireTLS bool
 	var opts []grpc.DialOption
 	if u.Scheme == "http" {
 		requireTLS = false
@@ -68,6 +75,8 @@ func (c *Config) parseEndpoint(endpoint string) error {
 			port = "80"
 		}
 	} else if u.Scheme == "https" {
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+		requireTLS = true
 		if port == "" {
 			port = "443"
 		}
@@ -75,8 +84,7 @@ func (c *Config) parseEndpoint(endpoint string) error {
 		return fmt.Errorf("unsupported url scheme: %s", u.Scheme)
 	}
 
-	c.host = host
-	c.port = port
+	c.connectionURI = fmt.Sprintf("dns:%s:%s", host, port)
 	c.requireTLS = requireTLS
 	c.opts = append(c.opts, opts...)
 

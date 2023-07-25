@@ -82,7 +82,7 @@ func TestConnectClient(t *testing.T) {
 
 	tokenCache := token.NewCache(fetcher, refreshToken)
 
-	connectClient, err := connect.NewAuthorizedConnectClient(ctx, connectServerEndpoint, tokenCache)
+	connectClient, err := connect.NewAuthorizedConnectClient(ctx, connectServerEndpoint, tokenCache.GetToken)
 	require.NoError(t, err, "error creating connect client")
 
 	stream, err := connectClient.Subscribe(ctx, &connect.SubscribeRequest{})

@@ -7,20 +7,25 @@ import (
 
 	"google.golang.org/grpc"
 	grpc_backoff "google.golang.org/grpc/backoff"
+)
 
-	"github.com/pomerium/zero-sdk/token"
+const (
+	defaultDialTimeout = time.Hour
 )
 
 type client struct {
-	config      *Config
-	tokenCache  *token.Cache
-	minTokenTTL time.Duration
+	config        *Config
+	tokenProvider TokenProviderFn
+	minTokenTTL   time.Duration
 }
+
+// TokenProviderFn is a function that returns a token that is expected to be valid for at least minTTL
+type TokenProviderFn func(ctx context.Context, minTTL time.Duration) (string, error)
 
 func NewAuthorizedConnectClient(
 	ctx context.Context,
 	endpoint string,
-	cache *token.Cache,
+	tokenProvider TokenProviderFn,
 ) (ConnectClient, error) {
 	cfg, err := NewConfig(endpoint)
 	if err != nil {
@@ -28,8 +33,8 @@ func NewAuthorizedConnectClient(
 	}
 
 	cc := &client{
-		tokenCache: cache,
-		config:     cfg,
+		tokenProvider: tokenProvider,
+		config:        cfg,
 		// streaming connection would reset based on token duration,
 		// so we need it be close to max duration 1hr
 		minTokenTTL: time.Minute * 55,
@@ -49,8 +54,9 @@ func (c *client) getGRPCConn(ctx context.Context) (*grpc.ClientConn, error) {
 		append(c.config.GetDialOptions(),
 			grpc.WithPerRPCCredentials(c),
 			grpc.WithConnectParams(grpc.ConnectParams{
-				Backoff:           grpc_backoff.DefaultConfig,
-				MinConnectTimeout: 1 * time.Second,
+				Backoff: grpc_backoff.DefaultConfig,
+				// the MinConnectTimeout is confusing and is actually the max timeout as per grpc implementation
+				MinConnectTimeout: c.config.GetDialTimeout(),
 			}),
 		)...)
 	if err != nil {
@@ -61,7 +67,7 @@ func (c *client) getGRPCConn(ctx context.Context) (*grpc.ClientConn, error) {
 
 // GetRequestMetadata implements credentials.PerRPCCredentials
 func (c *client) GetRequestMetadata(ctx context.Context, _ ...string) (map[string]string, error) {
-	token, err := c.tokenCache.GetToken(ctx, c.minTokenTTL)
+	token, err := c.tokenProvider(ctx, c.minTokenTTL)
 	if err != nil {
 		return nil, err
 	}
