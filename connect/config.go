@@ -55,7 +55,7 @@ func (c *Config) GetDialOptions() []grpc.DialOption {
 func (c *Config) buildTLSOptions() {
 	creds := insecure.NewCredentials()
 	if c.requireTLS {
-		credentials.NewTLS(&tls.Config{
+		creds = credentials.NewTLS(&tls.Config{
 			MinVersion: tls.VersionTLS12,
 		})
 	}
