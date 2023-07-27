@@ -281,6 +281,15 @@ func (response DownloadClusterResourceBundle400JSONResponse) VisitDownloadCluste
 	return json.NewEncoder(w).Encode(response)
 }
 
+type DownloadClusterResourceBundle404JSONResponse ErrorResponse
+
+func (response DownloadClusterResourceBundle404JSONResponse) VisitDownloadClusterResourceBundleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type DownloadClusterResourceBundle500JSONResponse ErrorResponse
 
 func (response DownloadClusterResourceBundle500JSONResponse) VisitDownloadClusterResourceBundleResponse(w http.ResponseWriter) error {
