@@ -11,6 +11,62 @@ security:
   - bearerAuth: []
 
 paths:
+  /bundles:
+    get: 
+      description: Get all cluster resource bundles
+      operationId: getClusterResourceBundles
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetBundlesResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  
+  /bundles/{bundleId}/download:
+    get:
+      description: Download cluster resource bundle
+      operationId: downloadClusterResourceBundle
+      parameters:
+        - $ref: "#/components/parameters/bundleId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadBundleResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /exchangeToken:
     post:
       description: Exchange cluster identity token for bearer token
@@ -36,9 +92,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
+  parameters:
+    bundleId:
+      name: bundleId
+      in: path
+      description: bundle id
+      required: true
+      schema:
+        type: string
+  
   schemas:
+    Bundle:
+      type: object
+      properties:
+        id:
+          type: string
+          description: bundle id
+      required:
+        - id
+
+    DownloadBundleResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          description: download URL
+        expiresInSeconds:
+          type: string
+          format: int64
+      required:
+        - url
+        - expiresInSeconds
     ErrorResponse:
       type: object
       properties:
@@ -67,3 +159,12 @@ components:
       required:
         - idToken
         - expiresInSeconds
+    GetBundlesResponse:
+      type: object
+      properties:
+        bundles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Bundle"
+      required:
+        - bundles
