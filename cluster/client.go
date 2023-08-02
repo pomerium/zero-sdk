@@ -1,11 +1,10 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/pomerium/zero-sdk/token"
 )
 
 const (
@@ -13,33 +12,32 @@ const (
 )
 
 type client struct {
-	tokenCache  *token.Cache
-	httpClient  *http.Client
-	minTokenTTL time.Duration
+	tokenProvider TokenProviderFn
+	httpClient    *http.Client
+	minTokenTTL   time.Duration
 }
+
+// TokenProviderFn is a function that returns a token that is expected to be valid for at least minTTL
+type TokenProviderFn func(ctx context.Context, minTTL time.Duration) (string, error)
 
 func NewAuthorizedClient(
 	endpoint string,
-	refreshToken string,
+	tokenProvider TokenProviderFn,
 	httpClient *http.Client,
 ) (ClientWithResponsesInterface, error) {
 	c := &client{
-		httpClient:  httpClient,
 		minTokenTTL: defaultMinTokenTTL,
+		httpClient:  httpClient,
 	}
 
-	fetcher, err := NewTokenFetcher(endpoint, WithHTTPClient(c.httpClient))
-	if err != nil {
-		return nil, fmt.Errorf("error creating token fetcher: %w", err)
-	}
-	c.tokenCache = token.NewCache(fetcher, refreshToken)
+	c.tokenProvider = tokenProvider
 
 	return NewClientWithResponses(endpoint, WithHTTPClient(c))
 }
 
 func (c *client) Do(req *http.Request) (*http.Response, error) {
 	ctx := req.Context()
-	token, err := c.tokenCache.GetToken(ctx, c.minTokenTTL)
+	token, err := c.tokenProvider(ctx, c.minTokenTTL)
 	if err != nil {
 		return nil, fmt.Errorf("error getting token: %w", err)
 	}
