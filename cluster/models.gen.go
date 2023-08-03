@@ -7,6 +7,12 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// BootsrapConfig defines model for BootsrapConfig.
+type BootsrapConfig struct {
+	// DatabrokerStorageConnection databroker storage connection string
+	DatabrokerStorageConnection *string `json:"databrokerStorageConnection,omitempty"`
+}
+
 // Bundle defines model for Bundle.
 type Bundle struct {
 	// Id bundle id
@@ -40,6 +46,9 @@ type ExchangeTokenResponse struct {
 	// IdToken ID token
 	IdToken string `json:"idToken"`
 }
+
+// GetBootstrapConfigResponse defines model for GetBootstrapConfigResponse.
+type GetBootstrapConfigResponse = BootsrapConfig
 
 // GetBundlesResponse defines model for GetBundlesResponse.
 type GetBundlesResponse struct {

@@ -89,6 +89,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// GetClusterBootstrapConfig request
+	GetClusterBootstrapConfig(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetClusterResourceBundles request
 	GetClusterResourceBundles(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -99,6 +102,18 @@ type ClientInterface interface {
 	ExchangeClusterIdentityTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	ExchangeClusterIdentityToken(ctx context.Context, body ExchangeClusterIdentityTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) GetClusterBootstrapConfig(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetClusterBootstrapConfigRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) GetClusterResourceBundles(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -147,6 +162,33 @@ func (c *Client) ExchangeClusterIdentityToken(ctx context.Context, body Exchange
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewGetClusterBootstrapConfigRequest generates requests for GetClusterBootstrapConfig
+func NewGetClusterBootstrapConfigRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/bootstrap")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewGetClusterResourceBundlesRequest generates requests for GetClusterResourceBundles
@@ -293,6 +335,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// GetClusterBootstrapConfigWithResponse request
+	GetClusterBootstrapConfigWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetClusterBootstrapConfigResp, error)
+
 	// GetClusterResourceBundlesWithResponse request
 	GetClusterResourceBundlesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetClusterResourceBundlesResp, error)
 
@@ -303,6 +348,30 @@ type ClientWithResponsesInterface interface {
 	ExchangeClusterIdentityTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error)
 
 	ExchangeClusterIdentityTokenWithResponse(ctx context.Context, body ExchangeClusterIdentityTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error)
+}
+
+type GetClusterBootstrapConfigResp struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GetBootstrapConfigResponse
+	JSON400      *ErrorResponse
+	JSON500      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetClusterBootstrapConfigResp) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetClusterBootstrapConfigResp) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type GetClusterResourceBundlesResp struct {
@@ -378,6 +447,15 @@ func (r ExchangeClusterIdentityTokenResp) StatusCode() int {
 	return 0
 }
 
+// GetClusterBootstrapConfigWithResponse request returning *GetClusterBootstrapConfigResp
+func (c *ClientWithResponses) GetClusterBootstrapConfigWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetClusterBootstrapConfigResp, error) {
+	rsp, err := c.GetClusterBootstrapConfig(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetClusterBootstrapConfigResp(rsp)
+}
+
 // GetClusterResourceBundlesWithResponse request returning *GetClusterResourceBundlesResp
 func (c *ClientWithResponses) GetClusterResourceBundlesWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetClusterResourceBundlesResp, error) {
 	rsp, err := c.GetClusterResourceBundles(ctx, reqEditors...)
@@ -411,6 +489,46 @@ func (c *ClientWithResponses) ExchangeClusterIdentityTokenWithResponse(ctx conte
 		return nil, err
 	}
 	return ParseExchangeClusterIdentityTokenResp(rsp)
+}
+
+// ParseGetClusterBootstrapConfigResp parses an HTTP response from a GetClusterBootstrapConfigWithResponse call
+func ParseGetClusterBootstrapConfigResp(rsp *http.Response) (*GetClusterBootstrapConfigResp, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetClusterBootstrapConfigResp{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GetBootstrapConfigResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseGetClusterResourceBundlesResp parses an HTTP response from a GetClusterResourceBundlesWithResponse call
