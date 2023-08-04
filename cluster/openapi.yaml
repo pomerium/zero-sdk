@@ -190,7 +190,7 @@ components:
         - idToken
         - expiresInSeconds
     GetBootstrapConfigResponse:
-      $ref: "#/components/schemas/BootsrapConfig"
+      $ref: "#/components/schemas/BootstrapConfig"
     GetBundlesResponse:
       type: object
       properties:
