@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	api "github.com/pomerium/zero-sdk/cluster"
+	"github.com/pomerium/zero-sdk/token"
 )
 
 func TestAPIClient(t *testing.T) {
@@ -41,7 +42,11 @@ func TestAPIClient(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	client, err := api.NewAuthorizedClient(srv.URL, "refresh-token", http.DefaultClient)
+	fetcher, err := api.NewTokenFetcher(srv.URL)
+	require.NoError(t, err)
+
+	tokenCache := token.NewCache(fetcher, "refresh-token")
+	client, err := api.NewAuthorizedClient(srv.URL, tokenCache.GetToken, http.DefaultClient)
 	require.NoError(t, err)
 
 	resp, err := client.ExchangeClusterIdentityTokenWithResponse(context.Background(),
