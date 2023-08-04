@@ -11,6 +11,29 @@ security:
   - bearerAuth: []
 
 paths:
+  /bootstrap:
+    get:
+      description: Get cluster bootstrap configuration
+      operationId: getClusterBootstrapConfig
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetBootstrapConfigResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /bundles:
     get: 
       description: Get all cluster resource bundles
@@ -110,6 +133,13 @@ components:
         type: string
   
   schemas:
+    BootstrapConfig:
+      type: object
+      properties:
+        databrokerStorageConnection:
+          type: string
+          description: databroker storage connection string
+
     Bundle:
       type: object
       properties:
@@ -159,6 +189,8 @@ components:
       required:
         - idToken
         - expiresInSeconds
+    GetBootstrapConfigResponse:
+      $ref: "#/components/schemas/BootstrapConfig"
     GetBundlesResponse:
       type: object
       properties:
