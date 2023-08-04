@@ -133,7 +133,7 @@ components:
         type: string
   
   schemas:
-    BootsrapConfig:
+    BootstrapConfig:
       type: object
       properties:
         databrokerStorageConnection:
