@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog"
@@ -29,6 +30,8 @@ func Start(ctx context.Context, client connect.ConnectClient) *Mux {
 type Mux struct {
 	client connect.ConnectClient
 	mux    *fanout.FanOut[message]
+
+	connected atomic.Bool
 }
 
 // run does not do any kind of backoff

@@ -11,6 +11,14 @@ import (
 // or an error occurs while muxing
 func (svc *Mux) Watch(ctx context.Context, opts ...WatchOption) error {
 	cfg := newConfig(opts...)
+
+	connected := svc.connected.Load()
+	if connected {
+		cfg.onConnected(ctx)
+	} else {
+		cfg.onDisconnected(ctx)
+	}
+
 	return svc.mux.Receive(ctx, func(ctx context.Context, msg message) error {
 		return dispatch(ctx, cfg, msg)
 	})
@@ -56,11 +64,13 @@ const (
 
 func (svc *Mux) onConnected(ctx context.Context) error {
 	s := connected
+	svc.connected.Store(true)
 	return svc.mux.Publish(ctx, message{stateChange: &s})
 }
 
 func (svc *Mux) onDisconnected(ctx context.Context) error {
 	s := disconnected
+	svc.connected.Store(false)
 	return svc.mux.Publish(ctx, message{stateChange: &s})
 }
 
