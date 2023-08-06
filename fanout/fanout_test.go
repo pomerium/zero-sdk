@@ -20,7 +20,7 @@ func TestFanOutStopped(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	f := fanout.New[int](ctx, fanout.WithPublishTimeout(time.Millisecond*10))
+	f := fanout.Start[int](ctx, fanout.WithPublishTimeout(time.Millisecond*10))
 	assert.Eventually(t, func() bool {
 		return errors.Is(f.Publish(context.Background(), 1), fanout.ErrStopped)
 	}, 5*time.Second, 10*time.Millisecond)
@@ -38,7 +38,7 @@ func TestFanOutEvictSlowSubscriber(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	t.Cleanup(cancel)
 
-	f := fanout.New[int](ctx,
+	f := fanout.Start[int](ctx,
 		fanout.WithReceiverBufferSize(1),
 		fanout.WithReceiverCallbackTimeout(timeout),
 	)
@@ -85,7 +85,7 @@ func TestFanOutReceiverCancelOnError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
-	f := fanout.New[int](ctx)
+	f := fanout.Start[int](ctx)
 	receiverErr := errors.New("receiver error")
 	errch := make(chan error, 1)
 
@@ -107,7 +107,7 @@ func TestFanOutFilter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	t.Cleanup(cancel)
 
-	f := fanout.New[int](ctx)
+	f := fanout.Start[int](ctx)
 	ready := make(chan struct{})
 	results := make(chan int)
 	go func() {
@@ -137,7 +137,7 @@ func BenchmarkFanout(b *testing.B) {
 
 	cycles := 1
 
-	f := fanout.New[int](ctx)
+	f := fanout.Start[int](ctx)
 	errStopReceiver := errors.New("stop receiver")
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.SetLimit(-1)
