@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"sync/atomic"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -40,11 +42,30 @@ type Mux struct {
 func (svc *Mux) run(ctx context.Context, cancel context.CancelCauseFunc) {
 	logger := log.Ctx(ctx).With().Str("service", "connect-mux").Logger().Level(zerolog.DebugLevel)
 
-	for ctx.Err() == nil {
-		err := svc.subscribeAndDispatch(ctx)
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = 0
+
+	delay := time.Duration(0)
+
+loop:
+	for {
+		if delay > 0 {
+			log.Ctx(ctx).Debug().Str("delay", delay.String()).Msg("backoff")
+		}
+
+		select {
+		case <-ctx.Done():
+			break loop
+		case <-time.After(delay):
+		}
+
+		err := svc.subscribeAndDispatch(ctx, bo.Reset)
 		if err != nil {
 			logger.Err(err).Msg("running")
 		}
+
+		delay = bo.NextBackOff()
+
 		if errors.Is(err, nonRetryableError{}) {
 			cancel(err)
 			return
@@ -63,7 +84,7 @@ func (e nonRetryableError) Is(target error) bool {
 	return ok
 }
 
-func (svc *Mux) subscribeAndDispatch(ctx context.Context) (err error) {
+func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -71,6 +92,7 @@ func (svc *Mux) subscribeAndDispatch(ctx context.Context) (err error) {
 	if err != nil {
 		return fmt.Errorf("subscribe: %w", err)
 	}
+	onConnected()
 
 	if err = svc.onConnected(ctx); err != nil {
 		return fmt.Errorf("on connected: %w", err)

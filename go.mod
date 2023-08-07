@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/bufbuild/buf v1.25.0
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/deepmap/oapi-codegen v1.13.2
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/hashicorp/go-multierror v1.1.1
