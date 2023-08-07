@@ -19,11 +19,11 @@ import (
 
 // Run starts the updates service, listening for updates from the cloud
 // until the context is canceled
-func Start(ctx context.Context, client connect.ConnectClient) *Mux {
+func Start(ctx context.Context, client connect.ConnectClient, opts ...fanout.Option) *Mux {
 	ctx, cancel := context.WithCancelCause(ctx)
 	svc := &Mux{
 		client: client,
-		mux:    fanout.Start[message](ctx),
+		mux:    fanout.Start[message](ctx, opts...),
 	}
 	go svc.run(ctx, cancel)
 	return svc
@@ -42,7 +42,7 @@ func (svc *Mux) run(ctx context.Context, cancel context.CancelCauseFunc) {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = 0
 
-	delay := time.Duration(1)
+	delay := time.Duration(time.Microsecond)
 
 loop:
 	for {
