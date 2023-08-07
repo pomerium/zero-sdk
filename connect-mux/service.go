@@ -42,18 +42,15 @@ func (svc *Mux) run(ctx context.Context, cancel context.CancelCauseFunc) {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = 0
 
-	delay := time.Duration(time.Microsecond)
+	timer := time.NewTimer(0)
+	defer timer.Stop()
 
 loop:
 	for {
-		if delay > 0 {
-			log.Ctx(ctx).Info().Str("delay", delay.String()).Msg("backoff")
-		}
-
 		select {
 		case <-ctx.Done():
 			break loop
-		case <-time.After(delay):
+		case <-timer.C:
 		}
 
 		err := svc.subscribeAndDispatch(ctx, bo.Reset)
@@ -61,7 +58,7 @@ loop:
 			logger.Err(err).Msg("running")
 		}
 
-		delay = bo.NextBackOff()
+		timer.Reset(bo.NextBackOff())
 
 		if errors.Is(err, nonRetryableError{}) {
 			cancel(err)
