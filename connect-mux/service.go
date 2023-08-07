@@ -36,21 +36,18 @@ type Mux struct {
 	connected atomic.Bool
 }
 
-// run does not do any kind of backoff
-// due to service having a ttl constraint on the server side,
-// thus we want to reconnect as soon as possible
 func (svc *Mux) run(ctx context.Context, cancel context.CancelCauseFunc) {
 	logger := log.Ctx(ctx).With().Str("service", "connect-mux").Logger().Level(zerolog.DebugLevel)
 
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = 0
 
-	delay := time.Duration(0)
+	delay := time.Duration(1)
 
 loop:
 	for {
 		if delay > 0 {
-			log.Ctx(ctx).Debug().Str("delay", delay.String()).Msg("backoff")
+			log.Ctx(ctx).Info().Str("delay", delay.String()).Msg("backoff")
 		}
 
 		select {
