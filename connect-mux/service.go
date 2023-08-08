@@ -10,7 +10,6 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/go-multierror"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/pomerium/zero-sdk/connect"
@@ -37,28 +36,34 @@ type Mux struct {
 }
 
 func (svc *Mux) run(ctx context.Context, cancel context.CancelCauseFunc) {
-	logger := log.Ctx(ctx).With().Str("service", "connect-mux").Logger().Level(zerolog.DebugLevel)
+	logger := log.Ctx(ctx).With().Str("service", "connect-mux").Logger()
+
+	logger.Info().Msg("starting connect-mux service")
 
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = 0
 
-	timer := time.NewTimer(0)
-	defer timer.Stop()
+	ticker := time.NewTicker(time.Microsecond)
+	defer ticker.Stop()
 
 loop:
 	for {
 		select {
 		case <-ctx.Done():
 			break loop
-		case <-timer.C:
+		case <-ticker.C:
 		}
+
+		log.Ctx(ctx).Info().Msg("connecting to connect service...")
 
 		err := svc.subscribeAndDispatch(ctx, bo.Reset)
 		if err != nil {
 			logger.Err(err).Msg("running")
 		}
 
-		timer.Reset(bo.NextBackOff())
+		log.Ctx(ctx).Info().Msg("disconnected from connect service")
+
+		ticker.Reset(bo.NextBackOff())
 
 		if errors.Is(err, nonRetryableError{}) {
 			cancel(err)
@@ -98,8 +103,10 @@ func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (e
 		).ErrorOrNil()
 	}()
 
+	log.Ctx(ctx).Info().Msg("subscribed to connect service")
 	for {
 		msg, err := stream.Recv()
+		log.Ctx(ctx).Info().Interface("msg", msg).Err(err).Msg("receive")
 		if err != nil {
 			return fmt.Errorf("receive: %w", err)
 		}
