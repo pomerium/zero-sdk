@@ -22,8 +22,8 @@ type FanOut[T any] struct {
 	subscribers chan *subscriber[T]
 }
 
-// New creates and runs a new FanOut
-func New[T any](ctx context.Context, opts ...Option) *FanOut[T] {
+// Start creates and runs a new FanOut
+func Start[T any](ctx context.Context, opts ...Option) *FanOut[T] {
 	cfg := defaultFanOutConfig()
 	cfg.apply(opts...)
 

@@ -4,9 +4,13 @@ go 1.20
 
 require (
 	github.com/bufbuild/buf v1.25.0
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/deepmap/oapi-codegen v1.13.2
 	github.com/go-chi/chi/v5 v5.0.10
+	github.com/hashicorp/go-multierror v1.1.1
+	github.com/rs/zerolog v1.30.0
 	github.com/stretchr/testify v1.8.4
+	golang.org/x/sync v0.3.0
 	google.golang.org/grpc v1.57.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0
 	google.golang.org/protobuf v1.31.0
@@ -49,6 +53,7 @@ require (
 	github.com/google/go-containerregistry v0.15.2 // indirect
 	github.com/google/pprof v0.0.0-20230705174524-200ffdc848b8 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.1.0 // indirect
 	github.com/jdxcode/netrc v0.0.0-20221124155335-4616370d1a84 // indirect
@@ -100,7 +105,6 @@ require (
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
-	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/term v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
