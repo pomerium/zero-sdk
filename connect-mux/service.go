@@ -16,7 +16,7 @@ import (
 	"github.com/pomerium/zero-sdk/fanout"
 )
 
-// Run starts the updates service, listening for updates from the cloud
+// Start starts the updates service, listening for updates from the cloud
 // until the context is canceled
 func Start(ctx context.Context, client connect.ConnectClient, opts ...fanout.Option) *Mux {
 	ctx, cancel := context.WithCancelCause(ctx)
@@ -83,6 +83,13 @@ func (e nonRetryableError) Is(target error) bool {
 	return ok
 }
 
+func nonRetryableErrorOrNil(err error) error {
+	if err == nil {
+		return nil
+	}
+	return nonRetryableError{err}
+}
+
 func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -99,7 +106,7 @@ func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (e
 	defer func() {
 		err = multierror.Append(
 			err,
-			nonRetryableError{svc.onDisconnected(ctx)},
+			nonRetryableErrorOrNil(svc.onDisconnected(ctx)),
 		).ErrorOrNil()
 	}()
 
