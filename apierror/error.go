@@ -1,6 +1,7 @@
-package cluster
+package apierror
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -19,11 +20,19 @@ func (e *terminalError) Unwrap() error {
 	return e.Err
 }
 
-// IsTerminal implements TerminalError interface
-// it may be used to check if an error is a terminal error in other packages
-func (e *terminalError) IsTerminal() {}
+// Is implements errors.Is for terminalError
+func (e *terminalError) Is(err error) bool {
+	_, ok := err.(*terminalError)
+	return ok
+}
 
-// NewTerminalError creates a new terminal error that should not be retried
+// NewTerminalError creates a new terminal error that cannot be retried
 func NewTerminalError(err error) error {
 	return &terminalError{Err: err}
+}
+
+// IsTerminalError returns true if the error is a terminal error
+func IsTerminalError(err error) bool {
+	var te *terminalError
+	return errors.As(err, &te)
 }

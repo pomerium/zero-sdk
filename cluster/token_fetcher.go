@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pomerium/zero-sdk/apierror"
 	"github.com/pomerium/zero-sdk/token"
 )
 
@@ -25,7 +26,7 @@ func NewTokenFetcher(endpoint string, opts ...ClientOption) (token.Fetcher, erro
 		}
 
 		if resp.JSON400 != nil {
-			return nil, NewTerminalError(fmt.Errorf("error fetching id token: %s", resp.JSON400.Error))
+			return nil, apierror.NewTerminalError(fmt.Errorf("error fetching id token: %s", resp.JSON400.Error))
 		}
 
 		if resp.JSON200 == nil {
