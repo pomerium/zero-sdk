@@ -22,6 +22,7 @@ func (e *terminalError) Unwrap() error {
 
 // Is implements errors.Is for terminalError
 func (e *terminalError) Is(err error) bool {
+	//nolint:errorlint
 	_, ok := err.(*terminalError)
 	return ok
 }
@@ -33,6 +34,9 @@ func NewTerminalError(err error) error {
 
 // IsTerminalError returns true if the error is a terminal error
 func IsTerminalError(err error) bool {
+	if err == nil {
+		return false
+	}
 	var te *terminalError
 	return errors.As(err, &te)
 }

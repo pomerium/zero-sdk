@@ -3,7 +3,6 @@ package mux
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 
+	"github.com/pomerium/zero-sdk/apierror"
 	"github.com/pomerium/zero-sdk/connect"
 	"github.com/pomerium/zero-sdk/fanout"
 )
@@ -65,29 +65,12 @@ loop:
 
 		ticker.Reset(bo.NextBackOff())
 
-		if errors.Is(err, nonRetryableError{}) {
+		if apierror.IsTerminalError(err) {
 			cancel(err)
 			return
 		}
 	}
 	cancel(fmt.Errorf("connect-mux run: %w", context.Cause(ctx)))
-}
-
-type nonRetryableError struct {
-	error
-}
-
-func (e nonRetryableError) Is(target error) bool {
-	//nolint:errorlint // we want to check for the exact type
-	_, ok := target.(nonRetryableError)
-	return ok
-}
-
-func nonRetryableErrorOrNil(err error) error {
-	if err == nil {
-		return nil
-	}
-	return nonRetryableError{err}
 }
 
 func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (err error) {
@@ -101,13 +84,10 @@ func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (e
 	onConnected()
 
 	if err = svc.onConnected(ctx); err != nil {
-		return fmt.Errorf("on connected: %w", err)
+		return err
 	}
 	defer func() {
-		err = multierror.Append(
-			err,
-			nonRetryableErrorOrNil(svc.onDisconnected(ctx)),
-		).ErrorOrNil()
+		err = multierror.Append(err, svc.onDisconnected(ctx)).ErrorOrNil()
 	}()
 
 	log.Ctx(ctx).Info().Msg("subscribed to connect service")
@@ -119,7 +99,7 @@ func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (e
 		}
 		err = svc.onMessage(ctx, msg)
 		if err != nil {
-			return nonRetryableError{fmt.Errorf("on message: %w", err)}
+			return err
 		}
 	}
 }
