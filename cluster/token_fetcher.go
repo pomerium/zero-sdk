@@ -25,7 +25,7 @@ func NewTokenFetcher(endpoint string, opts ...ClientOption) (token.Fetcher, erro
 		}
 
 		if resp.JSON400 != nil {
-			return nil, fmt.Errorf("error fetching id token: %s", resp.JSON400.Error)
+			return nil, NewTerminalError(fmt.Errorf("error fetching id token: %s", resp.JSON400.Error))
 		}
 
 		if resp.JSON200 == nil {
