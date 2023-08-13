@@ -27,6 +27,8 @@ func (e *terminalError) Is(err error) bool {
 	return ok
 }
 
+func (e *terminalError) IsTerminal() {}
+
 // NewTerminalError creates a new terminal error that cannot be retried
 func NewTerminalError(err error) error {
 	return &terminalError{Err: err}
