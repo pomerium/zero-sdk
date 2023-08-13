@@ -18,28 +18,21 @@ func NewTokenFetcher(endpoint string, opts ...ClientOption) (token.Fetcher, erro
 
 	return func(ctx context.Context, refreshToken string) (*token.Token, error) {
 		now := time.Now()
-		resp, err := client.ExchangeClusterIdentityTokenWithResponse(ctx, ExchangeTokenRequest{
+
+		resp, err := apierror.CheckResponse(client.ExchangeClusterIdentityTokenWithResponse(ctx, ExchangeTokenRequest{
 			RefreshToken: refreshToken,
-		})
+		}))
 		if err != nil {
-			return nil, fmt.Errorf("error fetching id token: %w", err)
+			return nil, fmt.Errorf("error exchanging token: %w", err)
 		}
 
-		if resp.JSON400 != nil {
-			return nil, apierror.NewTerminalError(fmt.Errorf("error fetching id token: %s", resp.JSON400.Error))
-		}
-
-		if resp.JSON200 == nil {
-			return nil, fmt.Errorf("unexpected response from exchangeToken: %d: %s", resp.StatusCode(), string(resp.Body))
-		}
-
-		expiresSeconds, err := strconv.ParseInt(resp.JSON200.ExpiresInSeconds, 10, 64)
+		expiresSeconds, err := strconv.ParseInt(resp.ExpiresInSeconds, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing expires in: %w", err)
 		}
 
 		return &token.Token{
-			Bearer:  resp.JSON200.IdToken,
+			Bearer:  resp.IdToken,
 			Expires: now.Add(time.Duration(expiresSeconds) * time.Second),
 		}, nil
 	}, nil
