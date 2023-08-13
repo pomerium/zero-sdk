@@ -19,7 +19,7 @@ func NewTokenFetcher(endpoint string, opts ...ClientOption) (token.Fetcher, erro
 	return func(ctx context.Context, refreshToken string) (*token.Token, error) {
 		now := time.Now()
 
-		resp, err := apierror.CheckResponse(client.ExchangeClusterIdentityTokenWithResponse(ctx, ExchangeTokenRequest{
+		resp, err := apierror.CheckResponse[ExchangeTokenResponse](client.ExchangeClusterIdentityTokenWithResponse(ctx, ExchangeTokenRequest{
 			RefreshToken: refreshToken,
 		}))
 		if err != nil {
