@@ -3,9 +3,6 @@ package zerosdk
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/pomerium/zero-sdk/apierror"
@@ -30,14 +27,16 @@ func NewAPI(opts ...Option) (*API, error) {
 		return nil, err
 	}
 
-	fetcher, err := cluster_api.NewTokenFetcher(cfg.clusterAPIEndpoint)
+	fetcher, err := cluster_api.NewTokenFetcher(cfg.clusterAPIEndpoint,
+		cluster_api.WithHTTPClient(cfg.httpClient),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating token fetcher: %w", err)
 	}
 
 	tokenCache := token_api.NewCache(fetcher, cfg.apiToken)
 
-	clusterClient, err := cluster_api.NewAuthorizedClient(cfg.clusterAPIEndpoint, tokenCache.GetToken, http.DefaultClient)
+	clusterClient, err := cluster_api.NewAuthorizedClient(cfg.clusterAPIEndpoint, tokenCache.GetToken, cfg.httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("error creating cluster client: %w", err)
 	}
@@ -72,38 +71,4 @@ func (api *API) GetClusterResourceBundles(ctx context.Context) (*cluster_api.Get
 	return apierror.CheckResponse[cluster_api.GetBundlesResponse](
 		api.cluster.GetClusterResourceBundlesWithResponse(ctx),
 	)
-}
-
-// DownloadClusterResourceBundle obtains a download URL for a resource bundle from the cluster API
-func (api *API) DownloadClusterResourceBundle(ctx context.Context, id string, minTTL time.Duration) (*url.URL, error) {
-	u, ok := api.downloadURLCache.Get(id, minTTL)
-	if ok {
-		return &u, nil
-	}
-
-	return api.updateBundleDownloadURL(ctx, id)
-}
-
-func (api *API) updateBundleDownloadURL(ctx context.Context, id string) (*url.URL, error) {
-	now := time.Now()
-
-	resp, err := apierror.CheckResponse[cluster_api.DownloadBundleResponse](
-		api.cluster.DownloadClusterResourceBundleWithResponse(ctx, id),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("get bundle download URL: %w", err)
-	}
-
-	expiresSeconds, err := strconv.ParseInt(resp.ExpiresInSeconds, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("parse expiration: %w", err)
-	}
-
-	u, err := url.Parse(resp.Url)
-	if err != nil {
-		return nil, fmt.Errorf("parse url: %w", err)
-	}
-
-	api.downloadURLCache.Set(id, *u, now.Add(time.Duration(expiresSeconds)*time.Second))
-	return u, nil
 }

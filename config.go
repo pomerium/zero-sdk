@@ -1,13 +1,19 @@
 package zerosdk
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+	"time"
+)
 
 type Option func(*config)
 
 type config struct {
-	clusterAPIEndpoint string
-	connectAPIEndpoint string
-	apiToken           string
+	clusterAPIEndpoint  string
+	connectAPIEndpoint  string
+	apiToken            string
+	httpClient          *http.Client
+	downloadURLCacheTTL time.Duration
 }
 
 // WithClusterAPIEndpoint sets the cluster API endpoint
@@ -31,8 +37,29 @@ func WithAPIToken(token string) Option {
 	}
 }
 
+// WithHTTPClient sets the HTTP client
+func WithHTTPClient(client *http.Client) Option {
+	return func(cfg *config) {
+		cfg.httpClient = client
+	}
+}
+
+// WithDownloadURLCacheTTL sets the minimum TTL for download URL cache entries
+func WithDownloadURLCacheTTL(ttl time.Duration) Option {
+	return func(cfg *config) {
+		cfg.downloadURLCacheTTL = ttl
+	}
+}
+
 func newConfig(opts ...Option) (*config, error) {
 	cfg := new(config)
+	for _, opt := range []Option{
+		WithHTTPClient(http.DefaultClient),
+		WithDownloadURLCacheTTL(15 * time.Minute),
+	} {
+		opt(cfg)
+	}
+
 	for _, opt := range opts {
 		opt(cfg)
 	}
@@ -51,6 +78,9 @@ func (c *config) validate() error {
 	}
 	if c.apiToken == "" {
 		return fmt.Errorf("API token is required")
+	}
+	if c.httpClient == nil {
+		return fmt.Errorf("HTTP client is required")
 	}
 	return nil
 }
