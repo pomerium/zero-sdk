@@ -3,12 +3,12 @@ package zerosdk
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pomerium/zero-sdk/apierror"
 	cluster_api "github.com/pomerium/zero-sdk/cluster"
 	connect_api "github.com/pomerium/zero-sdk/connect"
 	connect_mux "github.com/pomerium/zero-sdk/connect-mux"
+	"github.com/pomerium/zero-sdk/fanout"
 	token_api "github.com/pomerium/zero-sdk/token"
 )
 
@@ -16,12 +16,15 @@ import (
 type API struct {
 	cfg              *config
 	cluster          cluster_api.ClientWithResponsesInterface
+	mux              *connect_mux.Mux
 	downloadURLCache *cluster_api.URLCache
-	tokenProvider    func(ctx context.Context, minTTL time.Duration) (string, error)
 }
 
+// WatchOption defines which events to watch for
+type WatchOption = connect_mux.WatchOption
+
 // NewAPI creates a new API client
-func NewAPI(opts ...Option) (*API, error) {
+func NewAPI(ctx context.Context, opts ...Option) (*API, error) {
 	cfg, err := newConfig(opts...)
 	if err != nil {
 		return nil, err
@@ -41,22 +44,27 @@ func NewAPI(opts ...Option) (*API, error) {
 		return nil, fmt.Errorf("error creating cluster client: %w", err)
 	}
 
-	return &API{
-		cfg:              cfg,
-		cluster:          clusterClient,
-		downloadURLCache: cluster_api.NewURLCache(),
-		tokenProvider:    tokenCache.GetToken,
-	}, nil
-}
-
-// Connect creates a new connect mux client and starts it
-func (api *API) Connect(ctx context.Context) (*connect_mux.Mux, error) {
-	client, err := connect_api.NewAuthorizedConnectClient(ctx, api.cfg.connectAPIEndpoint, api.tokenProvider)
+	connectClient, err := connect_api.NewAuthorizedConnectClient(ctx, cfg.connectAPIEndpoint, tokenCache.GetToken)
 	if err != nil {
 		return nil, fmt.Errorf("error creating connect client: %w", err)
 	}
 
-	return connect_mux.Start(ctx, client), nil
+	return &API{
+		cfg:              cfg,
+		cluster:          clusterClient,
+		mux:              connect_mux.New(connectClient),
+		downloadURLCache: cluster_api.NewURLCache(),
+	}, nil
+}
+
+// Connect connects to the connect API and allows watching for changes
+func (api *API) Connect(ctx context.Context, opts ...fanout.Option) error {
+	return api.mux.Run(ctx, opts...)
+}
+
+// Watch dispatches API updates
+func (api *API) Watch(ctx context.Context, opts ...WatchOption) error {
+	return api.mux.Watch(ctx, opts...)
 }
 
 // GetClusterBootstrapConfig fetches the bootstrap configuration from the cluster API

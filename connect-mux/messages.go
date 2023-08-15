@@ -11,8 +11,10 @@ import (
 // Watch watches for changes to the config until either context is cancelled,
 // or an error occurs while muxing
 func (svc *Mux) Watch(ctx context.Context, opts ...WatchOption) error {
-	if svc.mux == nil {
-		return fmt.Errorf("mux is not initialized")
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-svc.ready:
 	}
 
 	cfg := newConfig(opts...)
