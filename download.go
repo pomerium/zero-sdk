@@ -6,10 +6,10 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -199,10 +199,9 @@ func httpDownloadError(ctx context.Context, resp *http.Response) error {
 
 // isXML parses content-type for application/xml
 func isXML(ct string) bool {
-	parts := strings.Split(ct, ";")
-	if len(parts) == 0 {
+	mediaType, _, err := mime.ParseMediaType(ct)
+	if err != nil {
 		return false
 	}
-	ct = strings.TrimSpace(parts[0])
-	return ct == "application/xml"
+	return mediaType == "application/xml"
 }
