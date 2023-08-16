@@ -48,7 +48,6 @@ linters:
     - staticcheck
     - tenv
     - thelper
-    - tparallel
     - unconvert
     - unused
     - whitespace

@@ -3,7 +3,6 @@ package mux
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -12,19 +11,18 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 
+	"github.com/pomerium/zero-sdk/apierror"
 	"github.com/pomerium/zero-sdk/connect"
 	"github.com/pomerium/zero-sdk/fanout"
 )
 
 // Start starts the updates service, listening for updates from the cloud
 // until the context is canceled
-func Start(ctx context.Context, client connect.ConnectClient, opts ...fanout.Option) *Mux {
-	ctx, cancel := context.WithCancelCause(ctx)
+func New(client connect.ConnectClient) *Mux {
 	svc := &Mux{
 		client: client,
-		mux:    fanout.Start[message](ctx, opts...),
+		ready:  make(chan struct{}),
 	}
-	go svc.run(ctx, cancel)
 	return svc
 }
 
@@ -32,62 +30,49 @@ type Mux struct {
 	client connect.ConnectClient
 	mux    *fanout.FanOut[message]
 
+	ready chan struct{}
+
 	connected atomic.Bool
 }
 
-func (svc *Mux) run(ctx context.Context, cancel context.CancelCauseFunc) {
-	logger := log.Ctx(ctx).With().Str("service", "connect-mux").Logger()
+func (svc *Mux) Run(ctx context.Context, opts ...fanout.Option) error {
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer func() { cancel(ctx.Err()) }()
 
-	logger.Info().Msg("starting connect-mux service")
+	svc.mux = fanout.Start[message](ctx, opts...)
+	close(svc.ready)
 
+	err := svc.run(ctx)
+	if err != nil {
+		cancel(err)
+		return err
+	}
+	return nil
+}
+
+func (svc *Mux) run(ctx context.Context) error {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = 0
 
 	ticker := time.NewTicker(time.Microsecond)
 	defer ticker.Stop()
 
-loop:
 	for {
 		select {
 		case <-ctx.Done():
-			break loop
+			return ctx.Err()
 		case <-ticker.C:
 		}
 
-		log.Ctx(ctx).Info().Msg("connecting to connect service...")
-
 		err := svc.subscribeAndDispatch(ctx, bo.Reset)
 		if err != nil {
-			logger.Err(err).Msg("running")
+			ticker.Reset(bo.NextBackOff())
 		}
 
-		log.Ctx(ctx).Info().Msg("disconnected from connect service")
-
-		ticker.Reset(bo.NextBackOff())
-
-		if errors.Is(err, nonRetryableError{}) {
-			cancel(err)
-			return
+		if apierror.IsTerminalError(err) {
+			return err
 		}
 	}
-	cancel(fmt.Errorf("connect-mux run: %w", context.Cause(ctx)))
-}
-
-type nonRetryableError struct {
-	error
-}
-
-func (e nonRetryableError) Is(target error) bool {
-	//nolint:errorlint // we want to check for the exact type
-	_, ok := target.(nonRetryableError)
-	return ok
-}
-
-func nonRetryableErrorOrNil(err error) error {
-	if err == nil {
-		return nil
-	}
-	return nonRetryableError{err}
 }
 
 func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (err error) {
@@ -101,13 +86,10 @@ func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (e
 	onConnected()
 
 	if err = svc.onConnected(ctx); err != nil {
-		return fmt.Errorf("on connected: %w", err)
+		return err
 	}
 	defer func() {
-		err = multierror.Append(
-			err,
-			nonRetryableErrorOrNil(svc.onDisconnected(ctx)),
-		).ErrorOrNil()
+		err = multierror.Append(err, svc.onDisconnected(ctx)).ErrorOrNil()
 	}()
 
 	log.Ctx(ctx).Info().Msg("subscribed to connect service")
@@ -119,7 +101,7 @@ func (svc *Mux) subscribeAndDispatch(ctx context.Context, onConnected func()) (e
 		}
 		err = svc.onMessage(ctx, msg)
 		if err != nil {
-			return nonRetryableError{fmt.Errorf("on message: %w", err)}
+			return err
 		}
 	}
 }

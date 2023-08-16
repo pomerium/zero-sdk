@@ -4,12 +4,19 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pomerium/zero-sdk/apierror"
 	"github.com/pomerium/zero-sdk/connect"
 )
 
 // Watch watches for changes to the config until either context is cancelled,
 // or an error occurs while muxing
 func (svc *Mux) Watch(ctx context.Context, opts ...WatchOption) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-svc.ready:
+	}
+
 	cfg := newConfig(opts...)
 
 	connected := svc.connected.Load()
@@ -62,18 +69,41 @@ const (
 	disconnected stateChange = "disconnected"
 )
 
+// Publish publishes a message to the fanout
+// we treat errors returned from the fanout as terminal,
+// as they are generally non recoverable
+func (svc *Mux) publish(ctx context.Context, msg message) error {
+	err := svc.mux.Publish(ctx, msg)
+	if err != nil {
+		return apierror.NewTerminalError(err)
+	}
+	return nil
+}
+
 func (svc *Mux) onConnected(ctx context.Context) error {
 	s := connected
 	svc.connected.Store(true)
-	return svc.mux.Publish(ctx, message{stateChange: &s})
+	err := svc.publish(ctx, message{stateChange: &s})
+	if err != nil {
+		return fmt.Errorf("onConnected: %w", err)
+	}
+	return nil
 }
 
 func (svc *Mux) onDisconnected(ctx context.Context) error {
 	s := disconnected
 	svc.connected.Store(false)
-	return svc.mux.Publish(ctx, message{stateChange: &s})
+	err := svc.publish(ctx, message{stateChange: &s})
+	if err != nil {
+		return fmt.Errorf("onDisconnected: %w", err)
+	}
+	return nil
 }
 
 func (svc *Mux) onMessage(ctx context.Context, msg *connect.Message) error {
-	return svc.mux.Publish(ctx, message{Message: msg})
+	err := svc.publish(ctx, message{Message: msg})
+	if err != nil {
+		return fmt.Errorf("onMessage: %w", err)
+	}
+	return nil
 }
