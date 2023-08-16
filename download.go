@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -33,8 +34,6 @@ func (api *API) DownloadClusterResourceBundle(
 		return nil, fmt.Errorf("get download request: %w", err)
 	}
 
-	log.Ctx(ctx).Debug().Str("bundle-id", id).Str("url", req.URL.String()).Interface("headers", req.Header).Msg("downloading bundle")
-
 	resp, err := api.cfg.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("do request: %w", err)
@@ -48,8 +47,6 @@ func (api *API) DownloadClusterResourceBundle(
 	if resp.StatusCode != http.StatusOK {
 		return nil, httpDownloadError(ctx, resp)
 	}
-
-	log.Ctx(ctx).Debug().Interface("headers", resp.Header).Msg("download response headers")
 
 	_, err = io.Copy(dst, resp.Body)
 	if err != nil {
@@ -124,8 +121,6 @@ type DownloadResult struct {
 	NotModified bool
 	// DownloadConditional contains the new conditional
 	*DownloadConditional
-	// Metadata contains the metadata of the downloaded bundle
-	Metadata map[string]string
 }
 
 type DownloadConditional struct {
@@ -174,15 +169,13 @@ func (e xmlError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
 
-func tryXMLError(ctx context.Context, body []byte) (bool, error) {
+func tryXMLError(body []byte) (bool, error) {
 	var xmlErr xmlError
 	err := xml.Unmarshal(body, &xmlErr)
 	if err != nil {
-		log.Ctx(ctx).Debug().Err(err).Msg("download response xml error")
-		return false, err
+		return false, fmt.Errorf("unmarshal xml error: %w", err)
 	}
 
-	log.Ctx(ctx).Debug().Str("download-error-code", xmlErr.Code).Str("download-error-message", xmlErr.Message).Str("download-error-details", xmlErr.Details).Msg("download error")
 	return true, xmlErr
 }
 
@@ -190,8 +183,8 @@ func httpDownloadError(ctx context.Context, resp *http.Response) error {
 	var buf bytes.Buffer
 	_, err := io.Copy(&buf, io.LimitReader(resp.Body, maxErrorResponseBodySize))
 
-	if resp.Header.Get("Content-Type") == "application/xml" {
-		ok, err := tryXMLError(ctx, buf.Bytes())
+	if isXML(resp.Header.Get("Content-Type")) {
+		ok, err := tryXMLError(buf.Bytes())
 		if ok {
 			return err
 		}
@@ -200,5 +193,16 @@ func httpDownloadError(ctx context.Context, resp *http.Response) error {
 	log.Ctx(ctx).Debug().Err(err).
 		Str("error", resp.Status).
 		Str("body", buf.String()).Msg("bundle download error")
+
 	return fmt.Errorf("download error: %s", resp.Status)
+}
+
+// isXML parses content-type for application/xml
+func isXML(ct string) bool {
+	parts := strings.Split(ct, ";")
+	if len(parts) == 0 {
+		return false
+	}
+	ct = strings.TrimSpace(parts[0])
+	return ct == "application/xml"
 }
