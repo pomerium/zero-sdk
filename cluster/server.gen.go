@@ -25,6 +25,9 @@ type ServerInterface interface {
 	// (GET /bundles/{bundleId}/download)
 	DownloadClusterResourceBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
 
+	// (POST /bundles/{bundleId}/status)
+	ReportClusterResourceBundleStatus(w http.ResponseWriter, r *http.Request, bundleId BundleId)
+
 	// (POST /exchangeToken)
 	ExchangeClusterIdentityToken(w http.ResponseWriter, r *http.Request)
 }
@@ -45,6 +48,11 @@ func (_ Unimplemented) GetClusterResourceBundles(w http.ResponseWriter, r *http.
 
 // (GET /bundles/{bundleId}/download)
 func (_ Unimplemented) DownloadClusterResourceBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /bundles/{bundleId}/status)
+func (_ Unimplemented) ReportClusterResourceBundleStatus(w http.ResponseWriter, r *http.Request, bundleId BundleId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115,6 +123,34 @@ func (siw *ServerInterfaceWrapper) DownloadClusterResourceBundle(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DownloadClusterResourceBundle(w, r, bundleId)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// ReportClusterResourceBundleStatus operation middleware
+func (siw *ServerInterfaceWrapper) ReportClusterResourceBundleStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "bundleId" -------------
+	var bundleId BundleId
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "bundleId", runtime.ParamLocationPath, chi.URLParam(r, "bundleId"), &bundleId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bundleId", Err: err})
+		return
+	}
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReportClusterResourceBundleStatus(w, r, bundleId)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -262,6 +298,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/bundles/{bundleId}/download", wrapper.DownloadClusterResourceBundle)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bundles/{bundleId}/status", wrapper.ReportClusterResourceBundleStatus)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/exchangeToken", wrapper.ExchangeClusterIdentityToken)
 	})
 
@@ -380,6 +419,41 @@ func (response DownloadClusterResourceBundle500JSONResponse) VisitDownloadCluste
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ReportClusterResourceBundleStatusRequestObject struct {
+	BundleId BundleId `json:"bundleId"`
+	Body     *ReportClusterResourceBundleStatusJSONRequestBody
+}
+
+type ReportClusterResourceBundleStatusResponseObject interface {
+	VisitReportClusterResourceBundleStatusResponse(w http.ResponseWriter) error
+}
+
+type ReportClusterResourceBundleStatus204Response struct {
+}
+
+func (response ReportClusterResourceBundleStatus204Response) VisitReportClusterResourceBundleStatusResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ReportClusterResourceBundleStatus400JSONResponse ErrorResponse
+
+func (response ReportClusterResourceBundleStatus400JSONResponse) VisitReportClusterResourceBundleStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReportClusterResourceBundleStatus500JSONResponse ErrorResponse
+
+func (response ReportClusterResourceBundleStatus500JSONResponse) VisitReportClusterResourceBundleStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ExchangeClusterIdentityTokenRequestObject struct {
 	Body *ExchangeClusterIdentityTokenJSONRequestBody
 }
@@ -426,6 +500,9 @@ type StrictServerInterface interface {
 
 	// (GET /bundles/{bundleId}/download)
 	DownloadClusterResourceBundle(ctx context.Context, request DownloadClusterResourceBundleRequestObject) (DownloadClusterResourceBundleResponseObject, error)
+
+	// (POST /bundles/{bundleId}/status)
+	ReportClusterResourceBundleStatus(ctx context.Context, request ReportClusterResourceBundleStatusRequestObject) (ReportClusterResourceBundleStatusResponseObject, error)
 
 	// (POST /exchangeToken)
 	ExchangeClusterIdentityToken(ctx context.Context, request ExchangeClusterIdentityTokenRequestObject) (ExchangeClusterIdentityTokenResponseObject, error)
@@ -527,6 +604,39 @@ func (sh *strictHandler) DownloadClusterResourceBundle(w http.ResponseWriter, r 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DownloadClusterResourceBundleResponseObject); ok {
 		if err := validResponse.VisitDownloadClusterResourceBundleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// ReportClusterResourceBundleStatus operation middleware
+func (sh *strictHandler) ReportClusterResourceBundleStatus(w http.ResponseWriter, r *http.Request, bundleId BundleId) {
+	var request ReportClusterResourceBundleStatusRequestObject
+
+	request.BundleId = bundleId
+
+	var body ReportClusterResourceBundleStatusJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReportClusterResourceBundleStatus(ctx, request.(ReportClusterResourceBundleStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReportClusterResourceBundleStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReportClusterResourceBundleStatusResponseObject); ok {
+		if err := validResponse.VisitReportClusterResourceBundleStatusResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -80,3 +80,45 @@ func (api *API) GetClusterResourceBundles(ctx context.Context) (*cluster_api.Get
 		api.cluster.GetClusterResourceBundlesWithResponse(ctx),
 	)
 }
+
+// ReportBundleAppliedSuccess reports a successful bundle application
+func (api *API) ReportBundleAppliedSuccess(ctx context.Context, bundleID string, metadata map[string]string) error {
+	var status cluster_api.BundleStatus
+	err := status.FromBundleStatusSuccess(cluster_api.BundleStatusSuccess{
+		Metadata: metadata,
+	})
+	if err != nil {
+		return fmt.Errorf("error creating bundle status: %w", err)
+	}
+	_, err = apierror.CheckResponse[cluster_api.EmptyResponse](
+		api.cluster.ReportClusterResourceBundleStatusWithResponse(ctx, bundleID, status),
+	)
+	if err != nil {
+		return fmt.Errorf("error reporting bundle status: %w", err)
+	}
+	return err
+}
+
+// ReportBundleAppliedFailure reports a failed bundle application
+func (api *API) ReportBundleAppliedFailure(
+	ctx context.Context,
+	bundleID string,
+	source cluster_api.BundleStatusFailureSource,
+	err error,
+) error {
+	var status cluster_api.BundleStatus
+	err = status.FromBundleStatusFailure(cluster_api.BundleStatusFailure{
+		Message: err.Error(),
+		Source:  source,
+	})
+	if err != nil {
+		return fmt.Errorf("error creating bundle status: %w", err)
+	}
+	_, err = apierror.CheckResponse[cluster_api.EmptyResponse](
+		api.cluster.ReportClusterResourceBundleStatusWithResponse(ctx, bundleID, status),
+	)
+	if err != nil {
+		return fmt.Errorf("error reporting bundle status: %w", err)
+	}
+	return err
+}

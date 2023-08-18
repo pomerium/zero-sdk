@@ -89,6 +89,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /bundles/{bundleId}/status:
+    post:
+      description: Report cluster resource bundle status
+      operationId: reportClusterResourceBundleStatus
+      parameters:
+        - $ref: "#/components/parameters/bundleId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BundleStatus"
+      responses:
+        "204":
+          description: OK
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /exchangeToken:
     post:
@@ -148,7 +175,38 @@ components:
           description: bundle id
       required:
         - id
-
+    BundleStatus:
+      oneOf:
+        - $ref: "#/components/schemas/BundleStatusSuccess"
+        - $ref: "#/components/schemas/BundleStatusFailure"
+    BundleStatusSuccess:
+      type: object
+      properties:
+        metadata:
+          type: object
+          description: bundle metadata
+          additionalProperties:
+            type: string
+      required:
+        - metadata
+    BundleStatusFailure:
+      type: object
+      properties:
+        message:
+          type: string
+        source:
+          type: string
+          description: source of the failure
+          enum:
+            - download_error
+            - io_error
+            - invalid_bundle
+            - databroker_error
+            - unknown_error
+      required:
+        - source
+        - message
+    
     DownloadBundleResponse:
       type: object
       properties:
@@ -158,9 +216,15 @@ components:
         expiresInSeconds:
           type: string
           format: int64
+        captureMetadataHeaders:
+          type: array
+          items:
+            type: string
+          description: bundle metadata that need be picked up by the client from the download URL
       required:
         - url
         - expiresInSeconds
+        - captureMetadataHeaders
     ErrorResponse:
       type: object
       properties:

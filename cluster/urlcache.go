@@ -8,42 +8,43 @@ import (
 
 type URLCache struct {
 	mx    sync.RWMutex
-	cache map[string]urlEntry
+	cache map[string]DownloadCacheEntry
 }
 
-type urlEntry struct {
-	URL       url.URL
+type DownloadCacheEntry struct {
+	// URL is the URL to download the bundle from.
+	URL url.URL
+	// ExpiresAt is the time at which the URL expires.
 	ExpiresAt time.Time
+	// CaptureHeaders is a list of headers to capture from the response.
+	CaptureHeaders []string
 }
 
 func NewURLCache() *URLCache {
 	return &URLCache{
-		cache: make(map[string]urlEntry),
+		cache: make(map[string]DownloadCacheEntry),
 	}
 }
 
-func (c *URLCache) Get(key string, minTTL time.Duration) (url.URL, bool) {
+func (c *URLCache) Get(key string, minTTL time.Duration) (*DownloadCacheEntry, bool) {
 	c.mx.RLock()
 	defer c.mx.RUnlock()
 
 	entry, ok := c.cache[key]
 	if !ok {
-		return url.URL{}, false
+		return nil, false
 	}
 
 	if time.Until(entry.ExpiresAt) < minTTL {
-		return url.URL{}, false
+		return nil, false
 	}
 
-	return entry.URL, true
+	return &entry, true
 }
 
-func (c *URLCache) Set(key string, value url.URL, expires time.Time) {
+func (c *URLCache) Set(key string, entry DownloadCacheEntry) {
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
-	c.cache[key] = urlEntry{
-		URL:       value,
-		ExpiresAt: expires,
-	}
+	c.cache[key] = entry
 }
