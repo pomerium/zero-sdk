@@ -176,9 +176,12 @@ components:
       required:
         - id
     BundleStatus:
-      oneOf:
-        - $ref: "#/components/schemas/BundleStatusSuccess"
-        - $ref: "#/components/schemas/BundleStatusFailure"
+      type: object
+      properties:
+        success:
+          $ref: "#/components/schemas/BundleStatusSuccess"
+        failure:
+          $ref: "#/components/schemas/BundleStatusFailure"
     BundleStatusSuccess:
       type: object
       properties:
