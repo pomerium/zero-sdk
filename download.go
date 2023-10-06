@@ -34,7 +34,7 @@ func (api *API) DownloadClusterResourceBundle(
 		return nil, fmt.Errorf("get download request: %w", err)
 	}
 
-	resp, err := api.cfg.httpClient.Do(req)
+	resp, err := api.cfg.httpClient.Do(req.Request)
 	if err != nil {
 		return nil, fmt.Errorf("do request: %w", err)
 	}
@@ -60,16 +60,22 @@ func (api *API) DownloadClusterResourceBundle(
 
 	return &DownloadResult{
 		DownloadConditional: updated,
+		Metadata:            extractMetadata(resp.Header, req.CaptureHeaders),
 	}, nil
 }
 
-func (api *API) getDownloadRequest(ctx context.Context, id string, current *DownloadConditional) (*http.Request, error) {
-	url, err := api.getDownloadURL(ctx, id)
+type downloadRequest struct {
+	*http.Request
+	cluster_api.DownloadCacheEntry
+}
+
+func (api *API) getDownloadRequest(ctx context.Context, id string, current *DownloadConditional) (*downloadRequest, error) {
+	params, err := api.getDownloadParams(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("get download URL: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, params.URL.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
@@ -79,19 +85,22 @@ func (api *API) getDownloadRequest(ctx context.Context, id string, current *Down
 		return nil, fmt.Errorf("set conditional download headers: %w", err)
 	}
 
-	return req, nil
+	return &downloadRequest{
+		Request:            req,
+		DownloadCacheEntry: *params,
+	}, nil
 }
 
-func (api *API) getDownloadURL(ctx context.Context, id string) (*url.URL, error) {
-	u, ok := api.downloadURLCache.Get(id, api.cfg.downloadURLCacheTTL)
+func (api *API) getDownloadParams(ctx context.Context, id string) (*cluster_api.DownloadCacheEntry, error) {
+	param, ok := api.downloadURLCache.Get(id, api.cfg.downloadURLCacheTTL)
 	if ok {
-		return &u, nil
+		return param, nil
 	}
 
-	return api.updateBundleDownloadURL(ctx, id)
+	return api.updateBundleDownloadParams(ctx, id)
 }
 
-func (api *API) updateBundleDownloadURL(ctx context.Context, id string) (*url.URL, error) {
+func (api *API) updateBundleDownloadParams(ctx context.Context, id string) (*cluster_api.DownloadCacheEntry, error) {
 	now := time.Now()
 
 	resp, err := apierror.CheckResponse[cluster_api.DownloadBundleResponse](
@@ -111,8 +120,13 @@ func (api *API) updateBundleDownloadURL(ctx context.Context, id string) (*url.UR
 		return nil, fmt.Errorf("parse url: %w", err)
 	}
 
-	api.downloadURLCache.Set(id, *u, now.Add(time.Duration(expiresSeconds)*time.Second))
-	return u, nil
+	param := cluster_api.DownloadCacheEntry{
+		URL:            *u,
+		ExpiresAt:      now.Add(time.Duration(expiresSeconds) * time.Second),
+		CaptureHeaders: resp.CaptureMetadataHeaders,
+	}
+	api.downloadURLCache.Set(id, param)
+	return &param, nil
 }
 
 // DownloadResult contains the result of a download operation
@@ -121,6 +135,8 @@ type DownloadResult struct {
 	NotModified bool
 	// DownloadConditional contains the new conditional
 	*DownloadConditional
+	// Metadata contains the metadata of the downloaded bundle
+	Metadata map[string]string
 }
 
 type DownloadConditional struct {
@@ -204,4 +220,15 @@ func isXML(ct string) bool {
 		return false
 	}
 	return mediaType == "application/xml"
+}
+
+func extractMetadata(header http.Header, keys []string) map[string]string {
+	m := make(map[string]string)
+	for _, k := range keys {
+		v := header.Get(k)
+		if v != "" {
+			m[k] = v
+		}
+	}
+	return m
 }

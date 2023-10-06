@@ -98,6 +98,11 @@ type ClientInterface interface {
 	// DownloadClusterResourceBundle request
 	DownloadClusterResourceBundle(ctx context.Context, bundleId BundleId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ReportClusterResourceBundleStatusWithBody request with any body
+	ReportClusterResourceBundleStatusWithBody(ctx context.Context, bundleId BundleId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ReportClusterResourceBundleStatus(ctx context.Context, bundleId BundleId, body ReportClusterResourceBundleStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ExchangeClusterIdentityTokenWithBody request with any body
 	ExchangeClusterIdentityTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -130,6 +135,30 @@ func (c *Client) GetClusterResourceBundles(ctx context.Context, reqEditors ...Re
 
 func (c *Client) DownloadClusterResourceBundle(ctx context.Context, bundleId BundleId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDownloadClusterResourceBundleRequest(c.Server, bundleId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ReportClusterResourceBundleStatusWithBody(ctx context.Context, bundleId BundleId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReportClusterResourceBundleStatusRequestWithBody(c.Server, bundleId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ReportClusterResourceBundleStatus(ctx context.Context, bundleId BundleId, body ReportClusterResourceBundleStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReportClusterResourceBundleStatusRequest(c.Server, bundleId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +281,53 @@ func NewDownloadClusterResourceBundleRequest(server string, bundleId BundleId) (
 	return req, nil
 }
 
+// NewReportClusterResourceBundleStatusRequest calls the generic ReportClusterResourceBundleStatus builder with application/json body
+func NewReportClusterResourceBundleStatusRequest(server string, bundleId BundleId, body ReportClusterResourceBundleStatusJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewReportClusterResourceBundleStatusRequestWithBody(server, bundleId, "application/json", bodyReader)
+}
+
+// NewReportClusterResourceBundleStatusRequestWithBody generates requests for ReportClusterResourceBundleStatus with any type of body
+func NewReportClusterResourceBundleStatusRequestWithBody(server string, bundleId BundleId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "bundleId", runtime.ParamLocationPath, bundleId)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/bundles/%s/status", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewExchangeClusterIdentityTokenRequest calls the generic ExchangeClusterIdentityToken builder with application/json body
 func NewExchangeClusterIdentityTokenRequest(server string, body ExchangeClusterIdentityTokenJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -344,6 +420,11 @@ type ClientWithResponsesInterface interface {
 	// DownloadClusterResourceBundleWithResponse request
 	DownloadClusterResourceBundleWithResponse(ctx context.Context, bundleId BundleId, reqEditors ...RequestEditorFn) (*DownloadClusterResourceBundleResp, error)
 
+	// ReportClusterResourceBundleStatusWithBodyWithResponse request with any body
+	ReportClusterResourceBundleStatusWithBodyWithResponse(ctx context.Context, bundleId BundleId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReportClusterResourceBundleStatusResp, error)
+
+	ReportClusterResourceBundleStatusWithResponse(ctx context.Context, bundleId BundleId, body ReportClusterResourceBundleStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*ReportClusterResourceBundleStatusResp, error)
+
 	// ExchangeClusterIdentityTokenWithBodyWithResponse request with any body
 	ExchangeClusterIdentityTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExchangeClusterIdentityTokenResp, error)
 
@@ -423,6 +504,29 @@ func (r DownloadClusterResourceBundleResp) StatusCode() int {
 	return 0
 }
 
+type ReportClusterResourceBundleStatusResp struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *ErrorResponse
+	JSON500      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ReportClusterResourceBundleStatusResp) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ReportClusterResourceBundleStatusResp) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ExchangeClusterIdentityTokenResp struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -472,6 +576,23 @@ func (c *ClientWithResponses) DownloadClusterResourceBundleWithResponse(ctx cont
 		return nil, err
 	}
 	return ParseDownloadClusterResourceBundleResp(rsp)
+}
+
+// ReportClusterResourceBundleStatusWithBodyWithResponse request with arbitrary body returning *ReportClusterResourceBundleStatusResp
+func (c *ClientWithResponses) ReportClusterResourceBundleStatusWithBodyWithResponse(ctx context.Context, bundleId BundleId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReportClusterResourceBundleStatusResp, error) {
+	rsp, err := c.ReportClusterResourceBundleStatusWithBody(ctx, bundleId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReportClusterResourceBundleStatusResp(rsp)
+}
+
+func (c *ClientWithResponses) ReportClusterResourceBundleStatusWithResponse(ctx context.Context, bundleId BundleId, body ReportClusterResourceBundleStatusJSONRequestBody, reqEditors ...RequestEditorFn) (*ReportClusterResourceBundleStatusResp, error) {
+	rsp, err := c.ReportClusterResourceBundleStatus(ctx, bundleId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReportClusterResourceBundleStatusResp(rsp)
 }
 
 // ExchangeClusterIdentityTokenWithBodyWithResponse request with arbitrary body returning *ExchangeClusterIdentityTokenResp
@@ -605,6 +726,39 @@ func ParseDownloadClusterResourceBundleResp(rsp *http.Response) (*DownloadCluste
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseReportClusterResourceBundleStatusResp parses an HTTP response from a ReportClusterResourceBundleStatusWithResponse call
+func ParseReportClusterResourceBundleStatusResp(rsp *http.Response) (*ReportClusterResourceBundleStatusResp, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReportClusterResourceBundleStatusResp{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest ErrorResponse
