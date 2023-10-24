@@ -46,7 +46,6 @@ func dispatch(ctx context.Context, cfg *config, msg message) error {
 		switch msg.Message.Message.(type) {
 		case *connect.Message_ConfigUpdated:
 			cfg.onBundleUpdated(ctx, "config")
-		case *connect.Message_BootstrapConfigUpdated:
 			cfg.onBootstrapConfigUpdated(ctx)
 		default:
 			return fmt.Errorf("unknown message type")
