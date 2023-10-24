@@ -10,7 +10,6 @@ type EmptyResponse struct{}
 
 var (
 	_ apierror.APIResponse[ExchangeTokenResponse]  = (*ExchangeClusterIdentityTokenResp)(nil)
-	_ apierror.APIResponse[BootstrapConfig]        = (*GetClusterBootstrapConfigResp)(nil)
 	_ apierror.APIResponse[GetBundlesResponse]     = (*GetClusterResourceBundlesResp)(nil)
 	_ apierror.APIResponse[DownloadBundleResponse] = (*DownloadClusterResourceBundleResp)(nil)
 	_ apierror.APIResponse[EmptyResponse]          = (*ReportClusterResourceBundleStatusResp)(nil)
@@ -35,28 +34,6 @@ func (r *ExchangeClusterIdentityTokenResp) GetValue() *ExchangeTokenResponse {
 }
 
 func (r *ExchangeClusterIdentityTokenResp) GetHTTPResponse() *http.Response {
-	return r.HTTPResponse
-}
-
-func (r *GetClusterBootstrapConfigResp) GetBadRequestError() (string, bool) {
-	if r.JSON400 == nil {
-		return "", false
-	}
-	return r.JSON400.Error, true
-}
-
-func (r *GetClusterBootstrapConfigResp) GetInternalServerError() (string, bool) {
-	if r.JSON500 == nil {
-		return "", false
-	}
-	return r.JSON500.Error, true
-}
-
-func (r *GetClusterBootstrapConfigResp) GetValue() *BootstrapConfig {
-	return r.JSON200
-}
-
-func (r *GetClusterBootstrapConfigResp) GetHTTPResponse() *http.Response {
 	return r.HTTPResponse
 }
 

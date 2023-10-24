@@ -67,13 +67,6 @@ func (api *API) Watch(ctx context.Context, opts ...WatchOption) error {
 	return api.mux.Watch(ctx, opts...)
 }
 
-// GetClusterBootstrapConfig fetches the bootstrap configuration from the cluster API
-func (api *API) GetClusterBootstrapConfig(ctx context.Context) (*cluster_api.BootstrapConfig, error) {
-	return apierror.CheckResponse[cluster_api.BootstrapConfig](
-		api.cluster.GetClusterBootstrapConfigWithResponse(ctx),
-	)
-}
-
 // GetClusterResourceBundles fetches the resource bundles from the cluster API
 func (api *API) GetClusterResourceBundles(ctx context.Context) (*cluster_api.GetBundlesResponse, error) {
 	return apierror.CheckResponse[cluster_api.GetBundlesResponse](

@@ -20,6 +20,11 @@ import (
 
 const (
 	maxErrorResponseBodySize = 2 << 14 // 32kb
+
+	// ClusterBootstrapConfigBundleName is the name of the bootstrap config bundle
+	ClusterBootstrapConfigBundleName = "bootstrap-config"
+	// ClusterConfigBundleName is the name of the main config bundle
+	ClusterConfigBundleName = "config"
 )
 
 // DownloadClusterResourceBundle downloads given cluster resource bundle to given writer.

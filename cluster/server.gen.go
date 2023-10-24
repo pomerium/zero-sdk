@@ -17,9 +17,6 @@ import (
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
-	// (GET /bootstrap)
-	GetClusterBootstrapConfig(w http.ResponseWriter, r *http.Request)
-
 	// (GET /bundles)
 	GetClusterResourceBundles(w http.ResponseWriter, r *http.Request)
 
@@ -36,11 +33,6 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
-
-// (GET /bootstrap)
-func (_ Unimplemented) GetClusterBootstrapConfig(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
 
 // (GET /bundles)
 func (_ Unimplemented) GetClusterResourceBundles(w http.ResponseWriter, r *http.Request) {
@@ -70,23 +62,6 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
-
-// GetClusterBootstrapConfig operation middleware
-func (siw *ServerInterfaceWrapper) GetClusterBootstrapConfig(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetClusterBootstrapConfig(w, r)
-	}))
-
-	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
-		handler = siw.HandlerMiddlewares[i](handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
 
 // GetClusterResourceBundles operation middleware
 func (siw *ServerInterfaceWrapper) GetClusterResourceBundles(w http.ResponseWriter, r *http.Request) {
@@ -290,9 +265,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/bootstrap", wrapper.GetClusterBootstrapConfig)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/bundles", wrapper.GetClusterResourceBundles)
 	})
 	r.Group(func(r chi.Router) {
@@ -306,40 +278,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 
 	return r
-}
-
-type GetClusterBootstrapConfigRequestObject struct {
-}
-
-type GetClusterBootstrapConfigResponseObject interface {
-	VisitGetClusterBootstrapConfigResponse(w http.ResponseWriter) error
-}
-
-type GetClusterBootstrapConfig200JSONResponse GetBootstrapConfigResponse
-
-func (response GetClusterBootstrapConfig200JSONResponse) VisitGetClusterBootstrapConfigResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetClusterBootstrapConfig400JSONResponse ErrorResponse
-
-func (response GetClusterBootstrapConfig400JSONResponse) VisitGetClusterBootstrapConfigResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type GetClusterBootstrapConfig500JSONResponse ErrorResponse
-
-func (response GetClusterBootstrapConfig500JSONResponse) VisitGetClusterBootstrapConfigResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-
-	return json.NewEncoder(w).Encode(response)
 }
 
 type GetClusterResourceBundlesRequestObject struct {
@@ -493,9 +431,6 @@ func (response ExchangeClusterIdentityToken500JSONResponse) VisitExchangeCluster
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
-	// (GET /bootstrap)
-	GetClusterBootstrapConfig(ctx context.Context, request GetClusterBootstrapConfigRequestObject) (GetClusterBootstrapConfigResponseObject, error)
-
 	// (GET /bundles)
 	GetClusterResourceBundles(ctx context.Context, request GetClusterResourceBundlesRequestObject) (GetClusterResourceBundlesResponseObject, error)
 
@@ -536,30 +471,6 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
-}
-
-// GetClusterBootstrapConfig operation middleware
-func (sh *strictHandler) GetClusterBootstrapConfig(w http.ResponseWriter, r *http.Request) {
-	var request GetClusterBootstrapConfigRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetClusterBootstrapConfig(ctx, request.(GetClusterBootstrapConfigRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetClusterBootstrapConfig")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetClusterBootstrapConfigResponseObject); ok {
-		if err := validResponse.VisitGetClusterBootstrapConfigResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
 }
 
 // GetClusterResourceBundles operation middleware

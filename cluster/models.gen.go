@@ -16,12 +16,6 @@ const (
 	UnknownError    BundleStatusFailureSource = "unknown_error"
 )
 
-// BootstrapConfig defines model for BootstrapConfig.
-type BootstrapConfig struct {
-	// DatabrokerStorageConnection databroker storage connection string
-	DatabrokerStorageConnection *string `json:"databrokerStorageConnection,omitempty"`
-}
-
 // Bundle defines model for Bundle.
 type Bundle struct {
 	// Id bundle id
@@ -80,9 +74,6 @@ type ExchangeTokenResponse struct {
 	// IdToken ID token
 	IdToken string `json:"idToken"`
 }
-
-// GetBootstrapConfigResponse defines model for GetBootstrapConfigResponse.
-type GetBootstrapConfigResponse = BootstrapConfig
 
 // GetBundlesResponse defines model for GetBundlesResponse.
 type GetBundlesResponse struct {

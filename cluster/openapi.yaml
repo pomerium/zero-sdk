@@ -11,32 +11,9 @@ security:
   - bearerAuth: []
 
 paths:
-  /bootstrap:
-    get:
-      description: Get cluster bootstrap configuration
-      operationId: getClusterBootstrapConfig
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GetBootstrapConfigResponse"
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
   /bundles:
-    get: 
-      description: Get all cluster resource bundles
+    get:
+      description: Get cluster resource bundles that need be reconciled with the databroker
       operationId: getClusterResourceBundles
       responses:
         "200":
@@ -57,7 +34,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  
+
   /bundles/{bundleId}/download:
     get:
       description: Download cluster resource bundle
@@ -158,15 +135,8 @@ components:
       required: true
       schema:
         type: string
-  
-  schemas:
-    BootstrapConfig:
-      type: object
-      properties:
-        databrokerStorageConnection:
-          type: string
-          description: databroker storage connection string
 
+  schemas:
     Bundle:
       type: object
       properties:
@@ -209,7 +179,7 @@ components:
       required:
         - source
         - message
-    
+
     DownloadBundleResponse:
       type: object
       properties:
@@ -256,8 +226,6 @@ components:
       required:
         - idToken
         - expiresInSeconds
-    GetBootstrapConfigResponse:
-      $ref: "#/components/schemas/BootstrapConfig"
     GetBundlesResponse:
       type: object
       properties:
