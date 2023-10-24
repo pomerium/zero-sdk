@@ -14,15 +14,14 @@ message SubscribeRequest {}
 // from the cloud to the core in managed mode.
 message Message {
   oneof message {
-    ConfigUpdated config_updated = 1;
+    BundleUpdated bundle_updated = 1;
   }
 }
 
-// ConfigUpdated is sent when the configuration has been updated
+// BundleUpdated is sent when the configuration has been updated
 // for the connected Pomerium Core deployment
-message ConfigUpdated {
-  // version of the configuration changeset
-  int64 changeset_version = 1;
+message BundleUpdated {
+  string id = 1;
 }
 
 // Connect service is used to maintain a persistent connection between the

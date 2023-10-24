@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pomerium/zero-sdk/apierror"
+	"github.com/pomerium/zero-sdk/cluster"
 	"github.com/pomerium/zero-sdk/connect"
 )
 
@@ -44,9 +45,13 @@ func dispatch(ctx context.Context, cfg *config, msg message) error {
 		}
 	case msg.Message != nil:
 		switch msg.Message.Message.(type) {
-		case *connect.Message_ConfigUpdated:
-			cfg.onBundleUpdated(ctx, "config")
-			cfg.onBootstrapConfigUpdated(ctx)
+		case *connect.Message_BundleUpdated:
+			bundleID := msg.Message.GetBundleUpdated().GetId()
+			if bundleID == cluster.ClusterBootstrapConfigBundleName {
+				cfg.onBootstrapConfigUpdated(ctx)
+			} else {
+				cfg.onBundleUpdated(ctx, "config")
+			}
 		default:
 			return fmt.Errorf("unknown message type")
 		}
