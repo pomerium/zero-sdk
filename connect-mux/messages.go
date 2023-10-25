@@ -47,10 +47,10 @@ func dispatch(ctx context.Context, cfg *config, msg message) error {
 		switch msg.Message.Message.(type) {
 		case *connect.Message_BundleUpdated:
 			bundleID := msg.Message.GetBundleUpdated().GetId()
-			if bundleID == cluster.ClusterBootstrapConfigBundleName {
-				cfg.onBootstrapConfigUpdated(ctx)
+			if bundleID == cluster.ClusterConfigBundleName {
+				cfg.onConfigUpdated(ctx)
 			} else {
-				cfg.onBundleUpdated(ctx, "config")
+				cfg.onBundleUpdated(ctx, bundleID)
 			}
 		default:
 			return fmt.Errorf("unknown message type")

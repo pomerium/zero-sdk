@@ -3,10 +3,10 @@ package mux
 import "context"
 
 type config struct {
-	onConnected              func(ctx context.Context)
-	onDisconnected           func(ctx context.Context)
-	onBundleUpdated          func(ctx context.Context, key string)
-	onBootstrapConfigUpdated func(ctx context.Context)
+	onConnected     func(ctx context.Context)
+	onDisconnected  func(ctx context.Context)
+	onBundleUpdated func(ctx context.Context, key string)
+	onConfigUpdated func(ctx context.Context)
 }
 
 type WatchOption func(*config)
@@ -32,10 +32,10 @@ func WithOnBundleUpdated(onBundleUpdated func(ctx context.Context, key string)) 
 	}
 }
 
-// WithOnBootstrapConfigUpdated sets the callback for when the bootstrap config is updated
-func WithOnBootstrapConfigUpdated(onBootstrapConfigUpdated func(context.Context)) WatchOption {
+// WithOnConfigUpdated sets the callback for when the config is updated
+func WithOnConfigUpdated(onConfigUpdated func(context.Context)) WatchOption {
 	return func(cfg *config) {
-		cfg.onBootstrapConfigUpdated = onBootstrapConfigUpdated
+		cfg.onConfigUpdated = onConfigUpdated
 	}
 }
 
@@ -45,7 +45,7 @@ func newConfig(opts ...WatchOption) *config {
 		WithOnConnected(func(_ context.Context) {}),
 		WithOnDisconnected(func(_ context.Context) {}),
 		WithOnBundleUpdated(func(_ context.Context, key string) {}),
-		WithOnBootstrapConfigUpdated(func(_ context.Context) {}),
+		WithOnConfigUpdated(func(_ context.Context) {}),
 	} {
 		opt(cfg)
 	}
