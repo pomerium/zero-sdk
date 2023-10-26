@@ -25,7 +25,6 @@ const (
 // DownloadClusterResourceBundle downloads given cluster resource bundle to given writer.
 func (api *API) DownloadClusterResourceBundle(
 	ctx context.Context,
-	dst io.Writer,
 	id string,
 	current *DownloadConditional,
 ) (*DownloadResult, error) {
@@ -38,29 +37,26 @@ func (api *API) DownloadClusterResourceBundle(
 	if err != nil {
 		return nil, fmt.Errorf("do request: %w", err)
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotModified {
-		return &DownloadResult{NotModified: true}, nil
+		return &DownloadResult{NotModified: true, ReadCloser: resp.Body}, nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
 		return nil, httpDownloadError(ctx, resp)
-	}
-
-	_, err = io.Copy(dst, resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("write body: %w", err)
 	}
 
 	updated, err := newConditionalFromResponse(resp)
 	if err != nil {
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("cannot obtain cache conditions from response: %w", err)
 	}
 
 	return &DownloadResult{
 		DownloadConditional: updated,
 		Metadata:            extractMetadata(resp.Header, req.CaptureHeaders),
+		ReadCloser:          resp.Body,
 	}, nil
 }
 
@@ -137,11 +133,13 @@ type DownloadResult struct {
 	*DownloadConditional
 	// Metadata contains the metadata of the downloaded bundle
 	Metadata map[string]string
+	// ReadCloser is the bundle content
+	io.ReadCloser
 }
 
 type DownloadConditional struct {
-	ETag         string
-	LastModified string
+	ETag         string `json:"etag"`
+	LastModified string `json:"last_modified"`
 }
 
 func (c *DownloadConditional) Validate() error {
