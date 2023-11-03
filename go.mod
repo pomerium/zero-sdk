@@ -1,6 +1,6 @@
 module github.com/pomerium/zero-sdk
 
-go 1.21
+go 1.20
 
 require (
 	github.com/bufbuild/buf v1.26.1
