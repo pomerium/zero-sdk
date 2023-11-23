@@ -2,6 +2,7 @@ package zerosdk
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/xml"
 	"fmt"
@@ -48,7 +49,16 @@ func (api *API) DownloadClusterResourceBundle(
 		return nil, httpDownloadError(ctx, resp)
 	}
 
-	_, err = io.Copy(dst, resp.Body)
+	r := resp.Body
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		r, err = gzip.NewReader(r)
+		if err != nil {
+			return nil, fmt.Errorf("gzip reader: %w", err)
+		}
+		defer r.Close()
+	}
+
+	_, err = io.Copy(dst, r)
 	if err != nil {
 		return nil, fmt.Errorf("write body: %w", err)
 	}
@@ -79,6 +89,7 @@ func (api *API) getDownloadRequest(ctx context.Context, id string, current *Down
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
+	req.Header.Set("Accept-Encoding", "gzip")
 
 	err = current.SetHeaders(req)
 	if err != nil {
