@@ -21,6 +21,7 @@ import (
 
 const (
 	maxErrorResponseBodySize = 2 << 14 // 32kb
+	maxUncompressedBlobSize  = 2 << 30 // 1gb
 )
 
 // DownloadClusterResourceBundle downloads given cluster resource bundle to given writer.
@@ -49,13 +50,15 @@ func (api *API) DownloadClusterResourceBundle(
 		return nil, httpDownloadError(ctx, resp)
 	}
 
-	r := resp.Body
+	var r io.Reader = resp.Body
 	if resp.Header.Get("Content-Encoding") == "gzip" {
-		r, err = gzip.NewReader(r)
+		zr, err := gzip.NewReader(r)
 		if err != nil {
 			return nil, fmt.Errorf("gzip reader: %w", err)
 		}
-		defer r.Close()
+		defer zr.Close()
+
+		r = io.LimitReader(zr, maxUncompressedBlobSize)
 	}
 
 	_, err = io.Copy(dst, r)
