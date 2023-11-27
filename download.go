@@ -2,6 +2,7 @@ package zerosdk
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/xml"
 	"fmt"
@@ -20,6 +21,7 @@ import (
 
 const (
 	maxErrorResponseBodySize = 2 << 14 // 32kb
+	maxUncompressedBlobSize  = 2 << 30 // 1gb
 )
 
 // DownloadClusterResourceBundle downloads given cluster resource bundle to given writer.
@@ -48,7 +50,18 @@ func (api *API) DownloadClusterResourceBundle(
 		return nil, httpDownloadError(ctx, resp)
 	}
 
-	_, err = io.Copy(dst, resp.Body)
+	var r io.Reader = resp.Body
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		zr, err := gzip.NewReader(r)
+		if err != nil {
+			return nil, fmt.Errorf("gzip reader: %w", err)
+		}
+		defer zr.Close()
+
+		r = io.LimitReader(zr, maxUncompressedBlobSize)
+	}
+
+	_, err = io.Copy(dst, r)
 	if err != nil {
 		return nil, fmt.Errorf("write body: %w", err)
 	}
@@ -79,6 +92,7 @@ func (api *API) getDownloadRequest(ctx context.Context, id string, current *Down
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
+	req.Header.Set("Accept-Encoding", "gzip")
 
 	err = current.SetHeaders(req)
 	if err != nil {
