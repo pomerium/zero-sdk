@@ -8,7 +8,7 @@ require (
 	github.com/deepmap/oapi-codegen v1.15.0
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/oapi-codegen/runtime v1.0.0
+	github.com/oapi-codegen/runtime v1.1.0
 	github.com/rs/zerolog v1.31.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sync v0.5.0
@@ -44,7 +44,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-containerregistry v0.15.2 // indirect
 	github.com/google/pprof v0.0.0-20230705174524-200ffdc848b8 // indirect
-	github.com/google/uuid v1.3.1 // indirect
+	github.com/google/uuid v1.4.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.1.0 // indirect
